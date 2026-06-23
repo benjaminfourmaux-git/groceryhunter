@@ -124,7 +124,9 @@ export async function deleteItem(id) {
 export async function getHistory(householdId) {
   const { data, error } = await supabase
     .from('shopping_trips')
-    .select('id, shopper_name, items, item_count, created_at')
+    // select('*') reste tolérant si la colonne `price` n'existe pas encore
+    // (avant la migration) : l'historique se charge, le prix s'affiche « — ».
+    .select('*')
     .eq('household_id', householdId)
     .order('created_at', { ascending: false })
     .limit(50)
@@ -154,11 +156,17 @@ export async function getStats(householdId) {
 
 // `boughtIds` = identifiants des articles réellement achetés (cochés dans la
 // fenêtre). Les autres restent dans la liste et ne sont pas archivés.
-export async function goShopping(boughtIds) {
+export async function goShopping(boughtIds, price) {
   const { data, error } = await supabase.functions.invoke('go-shopping', {
-    body: { boughtIds },
+    body: { boughtIds, price: price ?? null },
   })
   if (error) throw error
   if (data?.error) throw new Error(data.error)
   return data // { ok, archived, kept, notified }
+}
+
+// Met à jour le prix d'une sortie (édition depuis l'historique).
+export async function updateTripPrice(id, price) {
+  const { error } = await supabase.from('shopping_trips').update({ price }).eq('id', id)
+  if (error) throw error
 }

@@ -164,7 +164,8 @@ h2 {
 }
 .appbar .icon-btn.bell,
 .appbar .icon-btn.lang,
-.appbar .icon-btn.leave {
+.appbar .icon-btn.leave,
+.appbar .icon-btn.currency {
   background: rgba(255, 255, 255, 0.18);
   border-color: rgba(255, 255, 255, 0.26);
 }
@@ -318,6 +319,15 @@ h2 {
 .icon-btn.lang .flag {
   display: block;
   border-radius: 50%;
+}
+.icon-btn.currency {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.currency-symbol {
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1;
 }
 .icon-btn.ghost {
   color: var(--text-3);
@@ -719,6 +729,8 @@ h2 {
   gap: 11px;
 }
 .trip {
+  position: relative;
+  overflow: hidden;
   background: var(--glass);
   backdrop-filter: blur(14px) saturate(140%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
@@ -727,11 +739,57 @@ h2 {
   padding: 15px;
   box-shadow: var(--shadow-card);
   animation: item-in 0.42s var(--spring) both;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 0.2s var(--spring);
+}
+.trip > * {
+  position: relative;
+  z-index: 1;
+}
+/* Effet de charge à l'appui long : remplissage vert qui se remplit en 0,6 s. */
+.trip::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(90deg, rgba(70, 160, 44, 0.24), rgba(70, 160, 44, 0.12));
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+}
+.trip.charging {
+  transform: scale(0.985);
+}
+.trip.charging::after {
+  animation: charge 0.6s linear forwards;
+}
+@keyframes charge {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
 .trip-head {
   display: flex;
   align-items: center;
   gap: 11px;
+}
+.trip-right {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.trip-price {
+  font-size: 15.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text);
 }
 .trip-head-text {
   flex: 1;
@@ -766,6 +824,73 @@ h2 {
   font-size: 13px;
   padding: 5px 11px;
   border-radius: var(--pill);
+}
+
+/* ---------- Champ prix (feuille + édition historique) ---------- */
+/* Libellé et saisie sur la même ligne. */
+.price-field {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* libellé collé à gauche du champ, le tout à droite */
+  gap: 10px;
+  margin: 16px 2px;
+}
+.price-field-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.price-field-label .optional {
+  font-weight: 400;
+  font-style: normal;
+  color: var(--text-2);
+}
+.price-input-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  width: 100px;
+}
+.price-input {
+  width: 100%;
+  border: 1px solid var(--hairline-2);
+  background: var(--glass-2); /* même surface verre que le bouton « Annuler » */
+  color: var(--text);
+  border-radius: var(--radius-btn);
+  padding: 11px 28px 11px 12px;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: right;
+  outline: none;
+  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.price-input::placeholder {
+  color: var(--text-3);
+  font-weight: 600;
+}
+.price-input:focus {
+  border-color: rgba(70, 160, 44, 0.6);
+  box-shadow: 0 0 0 3px rgba(70, 160, 44, 0.16);
+}
+.price-cur {
+  position: absolute;
+  right: 11px;
+  font-weight: 800;
+  color: var(--text-2);
+  pointer-events: none;
+}
+/* Variante compacte pour l'édition en ligne dans l'historique. */
+.price-input-wrap.editing {
+  width: 100px;
+}
+.price-input-wrap.editing .price-input {
+  padding: 7px 22px 7px 8px;
+  font-size: 14px;
+}
+.price-input-wrap.editing .price-cur {
+  right: 8px;
+  font-size: 13px;
 }
 
 /* ---------- Onboarding ---------- */
@@ -1087,7 +1212,7 @@ h2 {
 }
 .confirm-list {
   list-style: none;
-  margin: 16px 0;
+  margin: 14px 0 0;
   padding: 2px;
   display: flex;
   flex-direction: column;

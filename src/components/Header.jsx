@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Icon from './Icon'
 import Avatar from './Avatar'
 import LangToggle from './LangToggle'
+import CurrencyToggle from './CurrencyToggle'
 import { useLang } from '../lib/i18n'
 
 export default function Header({ household, members, pushState, onEnablePush, onLeave, onShowStats }) {
@@ -47,6 +48,7 @@ export default function Header({ household, members, pushState, onEnablePush, on
             <Icon name="logout" size={19} />
           </button>
           <LangToggle />
+          <CurrencyToggle />
           <button
             type="button"
             className={'icon-btn bell ' + pushState}

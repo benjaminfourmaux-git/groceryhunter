@@ -51,9 +51,12 @@ create table if not exists public.shopping_trips (
   shopper_name  text not null,
   items         jsonb not null default '[]'::jsonb,
   item_count    int not null default 0,
+  price         numeric,
   created_at    timestamptz not null default now()
 );
 create index if not exists trips_household_idx on public.shopping_trips(household_id);
+-- Migration : ajoute le prix (facultatif) aux bases déjà créées.
+alter table public.shopping_trips add column if not exists price numeric;
 
 -- Abonnements Web Push (un par navigateur/appareil).
 create table if not exists public.push_subscriptions (
@@ -120,6 +123,13 @@ create policy trips_select on public.shopping_trips
 drop policy if exists trips_insert on public.shopping_trips;
 create policy trips_insert on public.shopping_trips
   for insert to authenticated
+  with check (household_id = public.current_household_id());
+
+-- Édition d'une sortie (ex. corriger le prix) par les membres du foyer.
+drop policy if exists trips_update on public.shopping_trips;
+create policy trips_update on public.shopping_trips
+  for update to authenticated
+  using (household_id = public.current_household_id())
   with check (household_id = public.current_household_id());
 
 drop policy if exists subs_all on public.push_subscriptions;

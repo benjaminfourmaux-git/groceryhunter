@@ -3,7 +3,8 @@ import { supabase, isConfigured } from './supabaseClient'
 import * as api from './lib/api'
 import { enablePush, pushSupported, pushPermission } from './lib/push'
 import { initPress } from './lib/press'
-import { useLang } from './lib/i18n'
+import { parsePrice, sanitizePriceInput } from './lib/price'
+import { useLang, useCurrency } from './lib/i18n'
 import Onboarding from './components/Onboarding'
 import Header from './components/Header'
 import ShoppingList from './components/ShoppingList'
@@ -13,6 +14,7 @@ import Icon from './components/Icon'
 
 export default function App() {
   const { t, lang } = useLang()
+  const { currencySymbol } = useCurrency()
   const [phase, setPhase] = useState('loading') // loading | onboarding | ready | error
   const [errorMsg, setErrorMsg] = useState(null)
   const [member, setMember] = useState(null)
@@ -24,6 +26,7 @@ export default function App() {
   const [goBusy, setGoBusy] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [bought, setBought] = useState(() => new Set())
+  const [price, setPrice] = useState('')
   const [leaving, setLeaving] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
   const [stats, setStats] = useState([])
@@ -252,11 +255,11 @@ export default function App() {
       showToast(err.message || t('err_delete'), 'error')
     }
   }
-  async function handleGoShopping(boughtIds) {
+  async function handleGoShopping(boughtIds, tripPrice) {
     setConfirming(false)
     setGoBusy(true)
     try {
-      const res = await api.goShopping(boughtIds)
+      const res = await api.goShopping(boughtIds, tripPrice)
       await Promise.all([loadItems(hid), loadHistory(hid)])
       const archived = res?.archived ?? 0
       const kept = res?.kept ?? 0
@@ -307,6 +310,15 @@ export default function App() {
     }
   }
 
+  async function handleUpdatePrice(id, newPrice) {
+    try {
+      await api.updateTripPrice(id, newPrice)
+      await loadHistory(hid)
+    } catch (err) {
+      showToast(err.message || t('err_action'), 'error')
+    }
+  }
+
   // ---- Rendu ----------------------------------------------------------------
   if (phase === 'loading') {
     return (
@@ -329,6 +341,7 @@ export default function App() {
   // ---- Fenêtre « J'ai fait les courses » ------------------------------------
   function openConfirm() {
     setBought(new Set(items.map((i) => i.id))) // tout coché par défaut
+    setPrice('')
     setConfirming(true)
   }
   function toggleBought(id) {
@@ -343,7 +356,10 @@ export default function App() {
   const allBought = items.length > 0 && boughtCount === items.length
   const keptCount = items.length - boughtCount
   function confirmGo() {
-    handleGoShopping(items.filter((i) => bought.has(i.id)).map((i) => i.id))
+    handleGoShopping(
+      items.filter((i) => bought.has(i.id)).map((i) => i.id),
+      parsePrice(price)
+    )
   }
 
   return (
@@ -361,7 +377,7 @@ export default function App() {
         {view === 'list' ? (
           <ShoppingList items={items} onAdd={handleAdd} onDelete={handleDelete} />
         ) : (
-          <History trips={trips} />
+          <History trips={trips} onUpdatePrice={handleUpdatePrice} />
         )}
       </main>
 
@@ -435,6 +451,23 @@ export default function App() {
                 )
               })}
             </ul>
+
+            <label className="price-field">
+              <span className="price-field-label">
+                {t('price_label')} <em className="optional">{t('optional')}</em>
+              </span>
+              <span className="price-input-wrap">
+                <input
+                  className="price-input"
+                  inputMode="decimal"
+                  value={price}
+                  onChange={(e) => setPrice(sanitizePriceInput(e.target.value))}
+                  placeholder={t('price_ph')}
+                  maxLength={10}
+                />
+                <span className="price-cur">{currencySymbol}</span>
+              </span>
+            </label>
 
             <div className="modal-actions">
               <button type="button" className="btn-ghost" onClick={() => setConfirming(false)}>

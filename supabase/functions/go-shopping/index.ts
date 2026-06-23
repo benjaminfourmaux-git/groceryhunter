@@ -71,9 +71,11 @@ Deno.serve(async (req: Request) => {
     // Articles réellement achetés (cochés dans la fenêtre de confirmation).
     // Si la liste n'est pas fournie (anciens clients), on considère tout acheté.
     let boughtIds: string[] | null = null
+    let price: number | null = null
     try {
       const body = await req.json()
       if (Array.isArray(body?.boughtIds)) boughtIds = body.boughtIds as string[]
+      if (typeof body?.price === 'number' && Number.isFinite(body.price)) price = body.price
     } catch {
       // Pas de corps JSON : on garde le comportement « tout a été acheté ».
     }
@@ -103,6 +105,7 @@ Deno.serve(async (req: Request) => {
         shopper_name: member.display_name,
         items: itemNames,
         item_count: itemNames.length,
+        price,
       })
       if (tErr) return json({ error: tErr.message }, 500)
 

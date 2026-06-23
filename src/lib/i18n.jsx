@@ -46,6 +46,7 @@ const fr = {
   copy_code: 'Copier le code du foyer',
   copied: 'Copié !',
   lang_toggle: 'Changer de langue',
+  currency_toggle: 'Changer de devise',
   members_aria: 'Membres du foyer',
   leave: 'Quitter le foyer',
   leave_title: 'Quitter le foyer ?',
@@ -79,6 +80,8 @@ const fr = {
   sheet_hint_partial: ({ n }) => `${n} article${n > 1 ? 's' : ''} gardé${n > 1 ? 's' : ''} dans la liste.`,
   cancel: 'Annuler',
   close: 'Fermer',
+  price_label: 'Prix des courses',
+  price_ph: '0,00',
   confirm_all: 'Courses complétées',
   confirm_partial: 'Courses partielles',
 
@@ -143,6 +146,7 @@ const en = {
   copy_code: 'Copy the home code',
   copied: 'Copied!',
   lang_toggle: 'Change language',
+  currency_toggle: 'Change currency',
   members_aria: 'Home members',
   leave: 'Leave the home',
   leave_title: 'Leave the home?',
@@ -174,6 +178,8 @@ const en = {
   sheet_hint_partial: ({ n }) => `${n} item${n > 1 ? 's' : ''} kept on the list.`,
   cancel: 'Cancel',
   close: 'Close',
+  price_label: 'Shopping cost',
+  price_ph: '0.00',
   confirm_all: 'Shopping done',
   confirm_partial: 'Partial shopping',
 
@@ -210,6 +216,10 @@ const en = {
 
 const dictionaries = { fr, en }
 
+// Devises proposées (réglage d'UI, comme la langue — pas de conversion).
+const CURRENCIES = ['EUR', 'USD', 'GBP', 'JPY']
+const CURRENCY_SYMBOL = { EUR: '€', USD: '$', GBP: '£', JPY: '¥' }
+
 function translate(lang, key, vars) {
   const dict = dictionaries[lang] || fr
   const value = dict[key]
@@ -230,8 +240,20 @@ export function LanguageProvider({ children }) {
     return 'fr'
   })
 
+  const [currency, setCurrency] = useState(() => {
+    try {
+      const saved = localStorage.getItem('currency')
+      if (CURRENCIES.includes(saved)) return saved
+    } catch {
+      /* noop */
+    }
+    return 'EUR'
+  })
+
   const langRef = useRef(lang)
   langRef.current = lang
+  const currencyRef = useRef(currency)
+  currencyRef.current = currency
 
   useEffect(() => {
     try {
@@ -242,11 +264,16 @@ export function LanguageProvider({ children }) {
     document.documentElement.lang = lang
   }, [lang])
 
-  // Bascule fluide : l'API View Transitions fait le fondu enchaîné des seuls
-  // mots qui changent (les zones identiques ne « bougent » pas visuellement).
-  const toggleLang = useCallback(() => {
-    const next = langRef.current === 'fr' ? 'en' : 'fr'
-    const apply = () => setLang(next)
+  useEffect(() => {
+    try {
+      localStorage.setItem('currency', currency)
+    } catch {
+      /* noop */
+    }
+  }, [currency])
+
+  // Transition fluide partagée (View Transitions) pour langue et devise.
+  const animate = useCallback((apply) => {
     const reduce =
       typeof window !== 'undefined' &&
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -257,14 +284,29 @@ export function LanguageProvider({ children }) {
     }
   }, [])
 
+  const toggleLang = useCallback(() => {
+    const next = langRef.current === 'fr' ? 'en' : 'fr'
+    animate(() => setLang(next))
+  }, [animate])
+
+  // Devise suivante dans le cycle €, $, £, ¥.
+  const cycleCurrency = useCallback(() => {
+    const i = CURRENCIES.indexOf(currencyRef.current)
+    const next = CURRENCIES[(i + 1) % CURRENCIES.length]
+    animate(() => setCurrency(next))
+  }, [animate])
+
   const value = useMemo(
     () => ({
       lang,
       locale: lang === 'en' ? 'en-GB' : 'fr-FR',
       toggleLang,
       t: (key, vars) => translate(lang, key, vars),
+      currency,
+      currencySymbol: CURRENCY_SYMBOL[currency],
+      cycleCurrency,
     }),
-    [lang, toggleLang]
+    [lang, toggleLang, currency, cycleCurrency]
   )
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>
@@ -274,4 +316,10 @@ export function useLang() {
   const ctx = useContext(LanguageContext)
   if (!ctx) throw new Error('useLang doit être utilisé dans <LanguageProvider>')
   return ctx
+}
+
+export function useCurrency() {
+  const ctx = useContext(LanguageContext)
+  if (!ctx) throw new Error('useCurrency doit être utilisé dans <LanguageProvider>')
+  return { currency: ctx.currency, currencySymbol: ctx.currencySymbol, cycleCurrency: ctx.cycleCurrency }
 }
