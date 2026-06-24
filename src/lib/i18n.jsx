@@ -39,7 +39,11 @@ const fr = {
   err_code: 'Indique le code du foyer.',
   err_generic: 'Une erreur est survenue.',
 
-  // Header
+  // Header / Réglages
+  settings_title: 'Réglages',
+  settings_notifications: 'Notifications',
+  settings_language: 'Langue',
+  settings_currency: 'Devise',
   bell_on: 'Notifications activées',
   bell_blocked: 'Notifications bloquées',
   bell_enable: 'Activer les notifications',
@@ -82,6 +86,7 @@ const fr = {
   close: 'Fermer',
   price_label: 'Prix des courses',
   price_ph: '0,00',
+  edit_price: 'Modifier le prix',
   confirm_all: 'Courses complétées',
   confirm_partial: 'Courses partielles',
 
@@ -140,6 +145,10 @@ const en = {
   err_code: 'Enter the home code.',
   err_generic: 'Something went wrong.',
 
+  settings_title: 'Settings',
+  settings_notifications: 'Notifications',
+  settings_language: 'Language',
+  settings_currency: 'Currency',
   bell_on: 'Notifications on',
   bell_blocked: 'Notifications blocked',
   bell_enable: 'Enable notifications',
@@ -180,6 +189,7 @@ const en = {
   close: 'Close',
   price_label: 'Shopping cost',
   price_ph: '0.00',
+  edit_price: 'Edit price',
   confirm_all: 'Shopping done',
   confirm_partial: 'Partial shopping',
 

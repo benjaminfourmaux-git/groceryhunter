@@ -1,5 +1,5 @@
 /* ===========================================================================
-   Liste de courses — thème sombre « liquid glass »
+   Liste de courses — thème clair « liquid glass » (vert nature + fond crème)
    Surfaces translucides (backdrop blur + liseré clair + reflet spéculaire),
    fond ambiant lumineux, et micro-interactions ressort façon iOS.
    =========================================================================== */
@@ -11,11 +11,14 @@
   --brand-deep: #2c6f17;
   --brand-ink: #ffffff;
   --brand-glow: rgba(70, 160, 44, 0.42);
+  /* Vert foncé pour le PETIT texte sur fond clair : #46a02c échoue WCAG AA
+     (~3:1), celui-ci passe (~5:1). Réservé au texte, pas aux aplats. */
+  --brand-text: #2c6f17;
 
   /* Encre (texte sombre sur fond clair) */
   --text: #21311a;
   --text-2: rgba(33, 49, 26, 0.62);
-  --text-3: rgba(33, 49, 26, 0.42);
+  --text-3: rgba(33, 49, 26, 0.5);
 
   /* Verre dépoli clair */
   --glass: rgba(255, 255, 255, 0.58);
@@ -34,6 +37,26 @@
   --pill: 999px;
 
   --blur: 20px;
+  --swipe-reveal: 76px;
+
+  /* Échelle typographique (corps de texte ; les titres display gardent
+     quelques tailles sur mesure : 18 / 19 / 22). */
+  --fs-2xs: 11px;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 14px;
+  --fs-md: 15px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 24px;
+
+  /* Échelle d'espacement — grille 4 px. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
 
   --shadow-card: inset 0 1px 0 0 var(--specular), 0 6px 16px rgba(40, 60, 30, 0.1);
   --shadow-pop: 0 18px 46px rgba(40, 60, 30, 0.2);
@@ -96,6 +119,22 @@ button {
   user-select: none;
 }
 
+/* Accessibilité clavier : anneau de focus visible sur toutes les commandes.
+   Masqué au pointeur (focus-visible), affiché à la navigation clavier.
+   L'outline suit le border-radius → fonctionne sur les boutons ronds/pilules. */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+/* Sur l'en-tête vert, l'anneau vert disparaîtrait : on le passe en blanc. */
+.appbar :focus-visible {
+  outline-color: #fff;
+}
+/* Les champs ont déjà leur halo via :focus ; pas de double anneau. */
+input:focus-visible {
+  outline: none;
+}
+
 h1,
 h2 {
   margin: 0;
@@ -145,7 +184,10 @@ h2 {
   color: #fff;
   background: linear-gradient(165deg, var(--brand), var(--brand-2));
   border-radius: 28px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 14px 30px rgba(44, 111, 23, 0.3);
+  /* Spread négatif (-10px) : l'ombre rentre SOUS la bulle au lieu de déborder
+     au-delà des coins arrondis (ce qui dessinait un « rectangle » vert foncé
+     derrière). Décalage et opacité réduits → halo doux, sans démarcation. */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 10px 26px -10px rgba(44, 111, 23, 0.32);
 }
 /* Sur l'en-tête vert, les éléments passent en blanc. */
 .appbar .code-chip {
@@ -159,23 +201,11 @@ h2 {
 .appbar .members-count {
   color: rgba(255, 255, 255, 0.88);
 }
+/* Le seul bouton dans l'appbar (« … ») hérite de la couleur #fff du parent. */
 .appbar .icon-btn {
   color: #fff;
-}
-.appbar .icon-btn.bell,
-.appbar .icon-btn.lang,
-.appbar .icon-btn.leave,
-.appbar .icon-btn.currency {
   background: rgba(255, 255, 255, 0.18);
   border-color: rgba(255, 255, 255, 0.26);
-}
-.appbar .icon-btn.bell.granted {
-  color: #fff;
-}
-.appbar .bell-dot {
-  background: #fff;
-  border-color: var(--brand-2);
-  box-shadow: none;
 }
 
 .appbar-top {
@@ -321,6 +351,8 @@ h2 {
   border-radius: 50%;
 }
 .icon-btn.currency {
+  background: var(--glass-2);
+  border-color: var(--hairline);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -376,7 +408,22 @@ h2 {
   gap: 9px;
   margin: 0 -14px;
   padding: 14px 14px 13px;
-  background: linear-gradient(180deg, #eef3e1 64%, rgba(238, 243, 225, 0));
+}
+/* Bandeau dépoli (pseudo-élément, derrière les champs) : il FLOUTE le fond
+   ambiant au lieu d'y poser un aplat crème opaque qui tranchait sur le dégradé.
+   Il en reprend donc la teinte (raccord invisible en haut) et s'estompe vers le
+   bas par un masque (pas d'arête en bas). Séparé des inputs pour ne pas rogner
+   leur bord inférieur, et hors de leur backdrop-filter (pas de flou imbriqué). */
+.add-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(238, 243, 225, 0.4);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  -webkit-mask: linear-gradient(180deg, #000 60%, transparent);
+  mask: linear-gradient(180deg, #000 60%, transparent);
 }
 .add-name,
 .add-qty {
@@ -441,18 +488,18 @@ h2 {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: var(--space-2);
 }
 .item {
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: var(--space-3);
   background: var(--glass);
   backdrop-filter: blur(14px) saturate(140%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-card);
-  padding: 13px 13px 13px 15px;
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
   box-shadow: var(--shadow-card);
   transition: opacity 0.3s var(--ease), transform 0.25s var(--spring), background 0.2s var(--ease);
   animation: item-in 0.42s var(--spring) both;
@@ -542,12 +589,95 @@ h2 {
 .qty-badge {
   flex: none;
   background: rgba(70, 160, 44, 0.16);
-  color: var(--brand);
-  font-size: 13px;
+  color: var(--brand-text);
+  font-size: var(--fs-sm);
   font-weight: 800;
   padding: 4px 11px;
   border-radius: var(--pill);
   border: 1px solid rgba(70, 160, 44, 0.24);
+}
+
+/* ---------- Swipe-to-delete ---------- */
+/* Le li (.swipe-row) porte bordure + rayon + ombre portée + clip. L'article
+   (.swipe-fg) est OPAQUE et glisse par-dessus un fond rouge plein continu
+   (.swipe-bg) : aucune démarcation, juste un bord droit article → rouge. */
+.swipe-row {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-card);
+  box-shadow: 0 6px 16px rgba(40, 60, 30, 0.1);
+  animation: item-in 0.42s var(--spring) both;
+}
+.swipe-bg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  background: var(--danger);
+}
+.swipe-delete {
+  width: var(--swipe-reveal);
+  border: none;
+  background: transparent;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.swipe-bg-icon {
+  display: inline-flex;
+  transition: transform 0.2s var(--spring);
+}
+/* Seuil atteint : l'icône grossit → « relâche pour supprimer ». */
+.swipe-row[data-armed] .swipe-bg-icon {
+  transform: scale(1.35);
+}
+.swipe-fg.item {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  background: #f8faf2; /* opaque : masque le rouge tant qu'on n'a pas glissé */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: inset 0 1px 0 var(--specular);
+  animation: none; /* l'entrée est portée par .swipe-row */
+  touch-action: pan-y; /* swipe horizontal capté, scroll vertical natif */
+  transition: transform 0.32s var(--spring);
+  will-change: transform;
+}
+.swipe-fg.item:active {
+  transform: none; /* pas de scale : il entrerait en conflit avec le translateX */
+}
+/* A11y clavier : Tab sur le bouton supprimer expose la zone rouge à droite. */
+.swipe-row:focus-within .swipe-fg.item {
+  transform: translateX(calc(-1 * var(--swipe-reveal)));
+}
+
+/* Variante historique : premier plan opaque qui neutralise le décor de carte du
+   .trip (porté désormais par .swipe-row), mais garde son padding. */
+.swipe-fg.trip {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  background: #f8faf2; /* opaque : masque le rouge tant qu'on n'a pas glissé */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: inset 0 1px 0 var(--specular);
+  animation: none; /* l'entrée est portée par .swipe-row */
+  touch-action: pan-y;
+  transition: transform 0.32s var(--spring);
+  will-change: transform;
+}
+/* A11y clavier : seul le focus DU bouton supprimer (dans .swipe-bg) révèle la
+   zone rouge — pas le focus du bouton prix présent dans le premier plan. */
+.swipe-bg:focus-within ~ .swipe-fg.trip {
+  transform: translateX(calc(-1 * var(--swipe-reveal)));
 }
 
 /* ---------- État vide ---------- */
@@ -586,8 +716,8 @@ h2 {
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 0 16px calc(var(--safe-bottom) + 14px);
+  gap: var(--space-3);
+  padding: 0 var(--space-4) calc(var(--safe-bottom) + 14px);
   pointer-events: none;
 }
 .dock > * {
@@ -612,7 +742,7 @@ h2 {
   border: none;
   border-radius: 18px;
   padding: 17px;
-  font-size: 16.5px;
+  font-size: var(--fs-lg);
   font-weight: 800;
   letter-spacing: -0.01em;
   color: var(--brand-ink);
@@ -723,10 +853,10 @@ h2 {
 .trips {
   list-style: none;
   margin: 0;
-  padding: 14px;
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: var(--space-3);
 }
 .trip {
   position: relative;
@@ -736,42 +866,13 @@ h2 {
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-card);
-  padding: 15px;
+  padding: var(--space-4);
   box-shadow: var(--shadow-card);
   animation: item-in 0.42s var(--spring) both;
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
   transition: transform 0.2s var(--spring);
-}
-.trip > * {
-  position: relative;
-  z-index: 1;
-}
-/* Effet de charge à l'appui long : remplissage vert qui se remplit en 0,6 s. */
-.trip::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: linear-gradient(90deg, rgba(70, 160, 44, 0.24), rgba(70, 160, 44, 0.12));
-  transform: scaleX(0);
-  transform-origin: left center;
-  pointer-events: none;
-}
-.trip.charging {
-  transform: scale(0.985);
-}
-.trip.charging::after {
-  animation: charge 0.6s linear forwards;
-}
-@keyframes charge {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
 }
 .trip-head {
   display: flex;
@@ -786,10 +887,29 @@ h2 {
   gap: 6px;
 }
 .trip-price {
-  font-size: 15.5px;
+  font-size: var(--fs-md);
   font-weight: 800;
   letter-spacing: -0.01em;
   color: var(--text);
+}
+/* Zone cliquable autour du prix : fond verre + bordure + crayon → signale
+   clairement « touche ici pour modifier » (remplace l'appui long invisible). */
+.price-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid var(--hairline-2);
+  border-radius: var(--radius-btn);
+  background: var(--glass-2);
+  color: var(--text-3); /* couleur du crayon ; le prix garde --text ci-dessous */
+  cursor: pointer;
+  transition: transform 0.18s var(--spring), background 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+.price-edit:active {
+  transform: scale(0.95);
+  background: var(--glass-3);
+  border-color: rgba(70, 160, 44, 0.4);
 }
 .trip-head-text {
   flex: 1;
@@ -803,9 +923,9 @@ h2 {
 }
 .trip-count {
   flex: none;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 800;
-  color: var(--brand);
+  color: var(--brand-text);
   background: rgba(70, 160, 44, 0.14);
   border: 1px solid rgba(70, 160, 44, 0.22);
   padding: 5px 11px;
@@ -960,11 +1080,11 @@ h2 {
   box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 .brand h1 {
-  font-size: 24px;
+  font-size: var(--fs-2xl);
 }
 .brand p {
   margin: 8px 0 0;
-  font-size: 14.5px;
+  font-size: var(--fs-base);
   line-height: 1.45;
 }
 
@@ -1036,7 +1156,7 @@ h2 {
 }
 .form-error {
   color: var(--danger);
-  font-size: 13.5px;
+  font-size: var(--fs-sm);
   margin: 0 0 12px;
 }
 
@@ -1133,7 +1253,12 @@ h2 {
   border: 1px solid var(--hairline-2);
   border-bottom: none;
   border-radius: 28px 28px 0 0;
-  padding: 14px 22px calc(22px + var(--safe-bottom));
+  /* « Jupe » de 80px sous le pli (padding bas + marge négative égale) : le
+     ressort de slide-up dépasse translateY(0) d'~10% de la hauteur et
+     laisserait voir l'arête basse du volet ; ce fond hors-champ l'absorbe.
+     Le contenu reste à la même place (les deux 80px se compensent). */
+  padding: 14px 22px calc(22px + var(--safe-bottom) + 80px);
+  margin-bottom: -80px;
   box-shadow: inset 0 1px 0 var(--specular), 0 -10px 40px rgba(0, 0, 0, 0.5);
   animation: slide-up 0.36s var(--spring);
 }
@@ -1143,6 +1268,31 @@ h2 {
   }
   to {
     transform: translateY(0);
+  }
+}
+/* Sortie symétrique du volet : il redescend hors-champ et l'overlay s'efface,
+   puis React démonte (cf. closeSettings). `forwards` fige l'état final le temps
+   du démontage pour éviter tout flash. */
+.modal-overlay.closing {
+  animation: overlay-out 0.3s var(--ease) forwards;
+}
+@keyframes overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.modal.closing {
+  animation: slide-down 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@keyframes slide-down {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
   }
 }
 .modal-grip {
@@ -1172,23 +1322,72 @@ h2 {
   box-shadow: 0 0 26px -8px rgba(225, 87, 76, 0.5);
 }
 .modal h2 {
-  font-size: 20px;
+  font-size: var(--fs-xl);
   margin-bottom: 9px;
 }
 .modal p {
   margin: 0 auto 20px;
   max-width: 320px;
-  font-size: 14.5px;
+  font-size: var(--fs-base);
   line-height: 1.5;
 }
 .modal-actions {
   display: flex;
-  gap: 11px;
+  gap: var(--space-3);
 }
 .modal-actions .btn-ghost,
 .modal-actions .btn-primary,
 .modal-actions .btn-danger {
   flex: 1;
+}
+
+/* ---------- Sheet de réglages ---------- */
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--glass);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-btn);
+  color: var(--text);
+  text-align: left;
+}
+.settings-label {
+  font-size: var(--fs-base);
+  font-weight: 700;
+}
+button.settings-row {
+  cursor: pointer;
+  transition: transform 0.18s var(--spring), background 0.2s var(--ease);
+}
+button.settings-row:active {
+  transform: scale(0.985);
+  background: var(--glass-2);
+}
+.settings-row.danger {
+  color: var(--danger);
+}
+.settings-row.danger .settings-label {
+  color: var(--danger);
+}
+/* Les toggles langue/devise portent leur propre backdrop-filter. Dans la
+   feuille, ils se retrouvent DANS le backdrop-filter de la modale → flou
+   imbriqué que WebKit recalcule à chaque tap (le flou d'arrière-plan « saute »).
+   Ils sont déjà posés sur la surface frostée de la modale : on retire leur flou
+   propre (rendu visuel identique) et le saut disparaît. */
+.settings-row .icon-btn.lang,
+.settings-row .icon-btn.currency {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* Variante : feuille « J'ai fait les courses » avec liste cochable. */
@@ -1202,12 +1401,12 @@ h2 {
   padding: 0 2px;
 }
 .sheet-head h2 {
-  font-size: 20px;
+  font-size: var(--fs-xl);
   margin-bottom: 7px;
 }
 .sheet-head p {
   margin: 0;
-  font-size: 13.5px;
+  font-size: var(--fs-sm);
   line-height: 1.45;
 }
 .confirm-list {
@@ -1216,7 +1415,7 @@ h2 {
   padding: 2px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -1260,7 +1459,7 @@ h2 {
 .confirm-name {
   flex: 1;
   min-width: 0;
-  font-size: 15.5px;
+  font-size: var(--fs-md);
   font-weight: 600;
   word-break: break-word;
 }
@@ -1332,9 +1531,9 @@ h2 {
   color: var(--text);
 }
 .pstep-val {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 800;
-  color: var(--brand);
+  color: var(--brand-text);
 }
 .pstep-block {
   width: 100%;
@@ -1378,7 +1577,7 @@ h2 {
   border-radius: 10px;
   background: var(--glass);
   border: 1px solid var(--hairline);
-  font-size: 12.5px;
+  font-size: var(--fs-xs);
 }
 .r-name {
   overflow: hidden;
@@ -1389,7 +1588,7 @@ h2 {
 .r-val {
   flex: none;
   font-weight: 800;
-  color: var(--brand);
+  color: var(--brand-text);
 }
 
 /* ---------- Écrans pleins (chargement / erreur) ---------- */
@@ -1439,7 +1638,7 @@ h2 {
   margin-bottom: 9px;
 }
 .error-card p {
-  font-size: 14.5px;
+  font-size: var(--fs-base);
   line-height: 1.5;
 }
 

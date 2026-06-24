@@ -170,3 +170,13 @@ export async function updateTripPrice(id, price) {
   const { error } = await supabase.from('shopping_trips').update({ price }).eq('id', id)
   if (error) throw error
 }
+
+// Supprime une sortie de l'historique (swipe dans l'historique).
+// `.select()` renvoie les lignes réellement supprimées : si RLS bloque le delete,
+// il n'y a ni erreur ni ligne → on lève pour que l'UI le sache (et ne reste pas
+// coincée « slidée »).
+export async function deleteTrip(id) {
+  const { data, error } = await supabase.from('shopping_trips').delete().eq('id', id).select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw new Error('not_deleted')
+}

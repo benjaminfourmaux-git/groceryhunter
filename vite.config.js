@@ -35,7 +35,10 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}']
       },
       devOptions: {
-        enabled: true,
+        // Désactivé en dev : le SW cachait les assets et masquait les
+        // changements (« un reload en retard »). HMR direct, sans cache.
+        // À repasser à true pour tester le comportement PWA/offline réel.
+        enabled: false,
         type: 'module'
       }
     })

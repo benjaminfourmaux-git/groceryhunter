@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(grep -noE \"#0[0-9a-f]{5}|#05080b|rgba\\\\\\(1?[0-9], ?[0-9]{1,2}, ?[0-9]{1,2}|rgba\\\\\\(3, 7, 11|rgba\\\\\\(7, 11, 16|rgba\\\\\\(17, 24, 31\" src/index.css)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npm run *)",
+      "Bash(python3 -c ' *)",
+      "Bash(awk '/@keyframes item-in/{f=1} f{print} f&&/^}/{c++} c==1&&f&&/^}/{exit}' src/index.css)"
     ]
   }
 }

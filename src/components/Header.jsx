@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import Icon from './Icon'
 import Avatar from './Avatar'
-import LangToggle from './LangToggle'
-import CurrencyToggle from './CurrencyToggle'
 import { useLang } from '../lib/i18n'
 
-export default function Header({ household, members, pushState, onEnablePush, onLeave, onShowStats }) {
+export default function Header({ household, members, onShowStats, onOpenSettings }) {
   const { t } = useLang()
   const [copied, setCopied] = useState(false)
 
@@ -18,13 +16,6 @@ export default function Header({ household, members, pushState, onEnablePush, on
       // Presse-papiers indisponible : on ne bloque pas.
     }
   }
-
-  const bellLabel =
-    pushState === 'granted'
-      ? t('bell_on')
-      : pushState === 'denied'
-        ? t('bell_blocked')
-        : t('bell_enable')
 
   return (
     <header className="appbar">
@@ -40,25 +31,12 @@ export default function Header({ household, members, pushState, onEnablePush, on
         <div className="appbar-actions">
           <button
             type="button"
-            className="icon-btn leave"
-            onClick={onLeave}
-            aria-label={t('leave')}
-            title={t('leave')}
+            className="icon-btn"
+            onClick={onOpenSettings}
+            aria-label={t('settings_title')}
+            title={t('settings_title')}
           >
-            <Icon name="logout" size={19} />
-          </button>
-          <LangToggle />
-          <CurrencyToggle />
-          <button
-            type="button"
-            className={'icon-btn bell ' + pushState}
-            onClick={onEnablePush}
-            disabled={pushState === 'granted' || pushState === 'denied'}
-            aria-label={bellLabel}
-            title={bellLabel}
-          >
-            <Icon name="bell" size={20} />
-            {pushState === 'granted' && <span className="bell-dot" />}
+            <Icon name="more" size={20} />
           </button>
         </div>
       </div>

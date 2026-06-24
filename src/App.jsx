@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { supabase, isConfigured } from './supabaseClient'
 import * as api from './lib/api'
 import { enablePush, pushSupported, pushPermission } from './lib/push'
@@ -11,6 +11,8 @@ import ShoppingList from './components/ShoppingList'
 import History from './components/History'
 import StatsPanel from './components/StatsPanel'
 import Icon from './components/Icon'
+import LangToggle from './components/LangToggle'
+import CurrencyToggle from './components/CurrencyToggle'
 
 export default function App() {
   const { t, lang } = useLang()
@@ -30,6 +32,8 @@ export default function App() {
   const [leaving, setLeaving] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
   const [stats, setStats] = useState([])
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsClosing, setSettingsClosing] = useState(false)
   const [toast, setToast] = useState(null)
 
   const channelRef = useRef(null)
@@ -37,6 +41,26 @@ export default function App() {
   const indicatorRef = useRef(null)
   const viewRef = useRef(view)
   viewRef.current = view
+
+  // Table nom → couleur réelle des membres : garantit qu'une même personne
+  // garde la même couleur d'avatar dans la liste, l'historique et les stats.
+  const memberColors = useMemo(
+    () => Object.fromEntries(members.map((m) => [m.display_name, m.color])),
+    [members]
+  )
+
+  // Ferme le volet de réglages en jouant l'animation de sortie (glissé vers le
+  // bas) avant de le démonter, façon volet roulant. `after` permet d'enchaîner
+  // (ex. ouvrir la confirmation « quitter le foyer ») une fois le volet sorti.
+  const SETTINGS_EXIT_MS = 300
+  function closeSettings(after) {
+    setSettingsClosing(true)
+    setTimeout(() => {
+      setSettingsOpen(false)
+      setSettingsClosing(false)
+      after?.()
+    }, SETTINGS_EXIT_MS)
+  }
 
   // Effet « press organique » sur tous les boutons (une seule fois).
   useEffect(() => initPress(), [])
@@ -253,6 +277,7 @@ export default function App() {
       await loadItems(hid)
     } catch (err) {
       showToast(err.message || t('err_delete'), 'error')
+      throw err // laisse le SwipeRow annuler le repli/glissement
     }
   }
   async function handleGoShopping(boughtIds, tripPrice) {
@@ -318,6 +343,15 @@ export default function App() {
       showToast(err.message || t('err_action'), 'error')
     }
   }
+  async function handleDeleteTrip(id) {
+    try {
+      await api.deleteTrip(id)
+      await loadHistory(hid)
+    } catch (err) {
+      showToast(err.message === 'not_deleted' ? t('err_delete') : err.message || t('err_delete'), 'error')
+      throw err // laisse le SwipeTrip annuler le glissement
+    }
+  }
 
   // ---- Rendu ----------------------------------------------------------------
   if (phase === 'loading') {
@@ -367,17 +401,20 @@ export default function App() {
       <Header
         household={member.household}
         members={members}
-        pushState={pushState}
-        onEnablePush={handleEnablePush}
-        onLeave={() => setLeaving(true)}
         onShowStats={handleShowStats}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
       <main className={'content' + (view === 'list' ? ' has-cta' : '')} key={view}>
         {view === 'list' ? (
           <ShoppingList items={items} onAdd={handleAdd} onDelete={handleDelete} />
         ) : (
-          <History trips={trips} onUpdatePrice={handleUpdatePrice} />
+          <History
+            trips={trips}
+            onUpdatePrice={handleUpdatePrice}
+            onDelete={handleDeleteTrip}
+            colorByName={memberColors}
+          />
         )}
       </main>
 
@@ -510,7 +547,7 @@ export default function App() {
               <h2>{t('stats_title')}</h2>
             </div>
             <div className="stats-scroll">
-              <StatsPanel stats={stats} />
+              <StatsPanel stats={stats} colorByName={memberColors} />
             </div>
             <div className="modal-actions">
               <button type="button" className="btn-ghost" onClick={() => setStatsOpen(false)}>
@@ -520,6 +557,68 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {settingsOpen && (() => {
+        const bellLabel =
+          pushState === 'granted' ? t('bell_on')
+          : pushState === 'denied' ? t('bell_blocked')
+          : t('bell_enable')
+        return (
+          <div
+            className={'modal-overlay' + (settingsClosing ? ' closing' : '')}
+            onClick={() => closeSettings()}
+          >
+            <div
+              className={'modal sheet' + (settingsClosing ? ' closing' : '')}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="modal-grip" aria-hidden="true" />
+              <div className="sheet-head">
+                <h2>{t('settings_title')}</h2>
+              </div>
+
+              <div className="settings-list">
+                <div className="settings-row">
+                  <span className="settings-label">{t('settings_notifications')}</span>
+                  <button
+                    type="button"
+                    className={'icon-btn bell ' + pushState}
+                    onClick={handleEnablePush}
+                    disabled={pushState === 'granted' || pushState === 'denied'}
+                    aria-label={bellLabel}
+                    title={bellLabel}
+                  >
+                    <Icon name="bell" size={20} />
+                    {pushState === 'granted' && <span className="bell-dot" />}
+                  </button>
+                </div>
+                <div className="settings-row">
+                  <span className="settings-label">{t('settings_language')}</span>
+                  <LangToggle />
+                </div>
+                <div className="settings-row">
+                  <span className="settings-label">{t('settings_currency')}</span>
+                  <CurrencyToggle />
+                </div>
+                <button
+                  type="button"
+                  className="settings-row danger"
+                  onClick={() => closeSettings(() => setLeaving(true))}
+                >
+                  <span className="settings-label">{t('leave')}</span>
+                  <Icon name="logout" size={19} />
+                </button>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost" onClick={() => closeSettings()}>
+                  {t('close')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {toast && <div className={'toast ' + toast.kind}>{toast.msg}</div>}
     </div>

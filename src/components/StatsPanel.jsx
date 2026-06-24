@@ -1,13 +1,6 @@
 import Avatar from './Avatar'
-import { AVATAR_COLORS } from '../lib/colors'
+import { hashColor } from '../lib/colors'
 import { useLang } from '../lib/i18n'
-
-// Couleur stable à partir du nom (cohérent avec l'historique).
-function colorFor(name) {
-  let h = 0
-  for (let i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
-  return AVATAR_COLORS[h % AVATAR_COLORS.length]
-}
 
 const MEDAL = { 1: '#f5c518', 2: '#c3ccd4', 3: '#cd8032' } // or, argent, bronze
 
@@ -20,7 +13,7 @@ function Trophy({ place }) {
   )
 }
 
-function Podium({ legend, entries, valueKey }) {
+function Podium({ legend, entries, valueKey, colorByName }) {
   const top3 = entries.slice(0, 3)
   const rest = entries.slice(3)
   // Ordre visuel des marches : 2e (gauche), 1er (centre), 3e (droite).
@@ -39,7 +32,7 @@ function Podium({ legend, entries, valueKey }) {
             {entry ? (
               <span className="pstep-top">
                 <Trophy place={place} />
-                <Avatar name={entry.name} color={colorFor(entry.name)} size={30} />
+                <Avatar name={entry.name} color={colorByName?.[entry.name] ?? hashColor(entry.name)} size={30} />
                 <span className="pstep-name">{entry.name}</span>
                 <span className="pstep-val">{entry[valueKey]}</span>
               </span>
@@ -64,7 +57,7 @@ function Podium({ legend, entries, valueKey }) {
   )
 }
 
-export default function StatsPanel({ stats }) {
+export default function StatsPanel({ stats, colorByName }) {
   const { t } = useLang()
 
   if (!stats || stats.length === 0) {
@@ -76,8 +69,8 @@ export default function StatsPanel({ stats }) {
 
   return (
     <div className="stats-podiums">
-      <Podium legend={t('stats_trips')} entries={byTrips} valueKey="trips" />
-      <Podium legend={t('stats_items')} entries={byItems} valueKey="items" />
+      <Podium legend={t('stats_trips')} entries={byTrips} valueKey="trips" colorByName={colorByName} />
+      <Podium legend={t('stats_items')} entries={byItems} valueKey="items" colorByName={colorByName} />
     </div>
   )
 }

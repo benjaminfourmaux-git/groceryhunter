@@ -132,6 +132,12 @@ create policy trips_update on public.shopping_trips
   using (household_id = public.current_household_id())
   with check (household_id = public.current_household_id());
 
+-- Suppression d'une sortie (swipe dans l'historique) par les membres du foyer.
+drop policy if exists trips_delete on public.shopping_trips;
+create policy trips_delete on public.shopping_trips
+  for delete to authenticated
+  using (household_id = public.current_household_id());
+
 drop policy if exists subs_all on public.push_subscriptions;
 create policy subs_all on public.push_subscriptions
   for all to authenticated

@@ -14,6 +14,14 @@ export function pickColor() {
   return AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)]
 }
 
+// Couleur stable dérivée du nom : repli quand la vraie couleur du membre est
+// inconnue (ex. historique d'une personne ayant quitté le foyer).
+export function hashColor(name) {
+  let h = 0
+  for (let i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
+  return AVATAR_COLORS[h % AVATAR_COLORS.length]
+}
+
 export function initials(name) {
   return (name || '?')
     .trim()
