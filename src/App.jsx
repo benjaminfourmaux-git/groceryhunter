@@ -37,6 +37,10 @@ export default function App() {
   const [toast, setToast] = useState(null)
 
   const channelRef = useRef(null)
+  // Après une mutation locale sur les articles, on a déjà rechargé la liste :
+  // on ignore l'écho temps réel (qui arrive plus tard) pour éviter un 2e rendu
+  // qui rejoue l'animation d'entrée (« rebond joué deux fois »).
+  const skipItemsEchoUntil = useRef(0)
   const tabbarRef = useRef(null)
   const indicatorRef = useRef(null)
   const viewRef = useRef(view)
@@ -217,7 +221,10 @@ export default function App() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'items', filter: `household_id=eq.${hid}` },
-        () => loadItems(hid)
+        () => {
+          if (Date.now() < skipItemsEchoUntil.current) return // écho de notre propre mutation
+          loadItems(hid)
+        }
       )
       .on(
         'postgres_changes',
@@ -265,6 +272,7 @@ export default function App() {
 
   async function handleAdd(name, qty) {
     try {
+      skipItemsEchoUntil.current = Date.now() + 1500
       await api.addItem(hid, member.id, name, qty)
       await loadItems(hid)
     } catch (err) {
@@ -273,6 +281,7 @@ export default function App() {
   }
   async function handleDelete(id) {
     try {
+      skipItemsEchoUntil.current = Date.now() + 1500
       await api.deleteItem(id)
       await loadItems(hid)
     } catch (err) {
