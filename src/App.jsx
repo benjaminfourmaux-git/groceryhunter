@@ -290,20 +290,59 @@ export default function App() {
     }
   }
   async function handleDelete(id) {
+    // Optimistic UI : on retire l'article tout de suite, on confirme en
+    // arrière-plan. En cas d'échec, on le remet à sa place (rollback) + toast.
+    const index = items.findIndex((it) => it.id === id)
+    if (index === -1) return
+    const removed = items[index]
+    setItems((prev) => prev.filter((it) => it.id !== id))
+
     try {
       skipItemsEchoUntil.current = Date.now() + 1500
       await api.deleteItem(id)
-      await loadItems(hid)
     } catch (err) {
+      setItems((prev) => {
+        const next = [...prev]
+        next.splice(Math.min(index, next.length), 0, removed)
+        return next
+      })
       showToast(err.message || t('err_delete'), 'error')
-      throw err // laisse le SwipeRow annuler le repli/glissement
     }
   }
   async function handleGoShopping(boughtIds, tripPrice) {
     setConfirming(false)
+
+    // Optimistic UI : on retire tout de suite les articles achetés de la liste
+    // et on pousse la sortie dans l'historique, avant la réponse de l'edge
+    // function. On réconcilie ensuite avec le serveur (id réel de la sortie…).
+    const boughtSet = new Set(boughtIds)
+    const prevItems = items
+    const boughtItems = items.filter((it) => boughtSet.has(it.id))
+    // Les non-achetés restent dans la liste, décochés (comme côté serveur).
+    const keptItems = items
+      .filter((it) => !boughtSet.has(it.id))
+      .map((it) => (it.checked ? { ...it, checked: false } : it))
+    const optimisticTrip =
+      boughtItems.length > 0
+        ? {
+            id: uuid(),
+            shopper_name: member.display_name,
+            // Même format que l'edge function : « nom (quantité) ».
+            items: boughtItems.map((it) => (it.quantity ? `${it.name} (${it.quantity})` : it.name)),
+            item_count: boughtItems.length,
+            price: tripPrice ?? null,
+            created_at: new Date().toISOString(),
+          }
+        : null
+
+    skipItemsEchoUntil.current = Date.now() + 1500
+    setItems(keptItems)
+    if (optimisticTrip) setTrips((prev) => [optimisticTrip, ...prev])
+
     setGoBusy(true)
     try {
       const res = await api.goShopping(boughtIds, tripPrice)
+      // Réconciliation : id réel de la sortie, articles côté serveur, etc.
       await Promise.all([loadItems(hid), loadHistory(hid)])
       const archived = res?.archived ?? 0
       const kept = res?.kept ?? 0
@@ -314,6 +353,9 @@ export default function App() {
         showToast(t('toast_done', { archived, kept, notified }), 'success')
       }
     } catch (err) {
+      // Rollback : on restaure la liste et on retire la sortie optimiste.
+      setItems(prevItems)
+      if (optimisticTrip) setTrips((prev) => prev.filter((tr) => tr.id !== optimisticTrip.id))
       showToast(err.message || t('err_action'), 'error')
     } finally {
       setGoBusy(false)
@@ -363,12 +405,22 @@ export default function App() {
     }
   }
   async function handleDeleteTrip(id) {
+    // Optimistic UI : on retire la sortie tout de suite, on confirme en
+    // arrière-plan. Rollback à la même position + toast en cas d'échec.
+    const index = trips.findIndex((tr) => tr.id === id)
+    if (index === -1) return
+    const removed = trips[index]
+    setTrips((prev) => prev.filter((tr) => tr.id !== id))
+
     try {
       await api.deleteTrip(id)
-      await loadHistory(hid)
     } catch (err) {
+      setTrips((prev) => {
+        const next = [...prev]
+        next.splice(Math.min(index, next.length), 0, removed)
+        return next
+      })
       showToast(err.message === 'not_deleted' ? t('err_delete') : err.message || t('err_delete'), 'error')
-      throw err // laisse le SwipeTrip annuler le glissement
     }
   }
 
