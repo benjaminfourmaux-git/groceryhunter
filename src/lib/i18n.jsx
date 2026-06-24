@@ -59,8 +59,7 @@ const fr = {
   leave_confirm: 'Quitter',
   err_leave: 'Impossible de quitter le foyer.',
   stats_title: 'Classement',
-  stats_trips: 'Courses faites',
-  stats_items: 'Articles achetés',
+  stats_trips_unit: ({ n }) => (n > 1 ? 'courses' : 'course'),
   stats_empty: 'Personne n’a encore fait les courses.',
 
   // Liste
@@ -164,8 +163,7 @@ const en = {
   leave_confirm: 'Leave',
   err_leave: 'Couldn’t leave the home.',
   stats_title: 'Leaderboard',
-  stats_trips: 'Shopping trips',
-  stats_items: 'Items bought',
+  stats_trips_unit: ({ n }) => (n > 1 ? 'trips' : 'trip'),
   stats_empty: 'No one has done the shopping yet.',
 
   add_item_ph: 'Add an item…',

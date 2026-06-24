@@ -620,7 +620,7 @@ export default function App() {
               <h2>{t('stats_title')}</h2>
             </div>
             <div className="stats-scroll">
-              <StatsPanel stats={stats} colorByName={memberColors} />
+              <StatsPanel members={members} stats={stats} />
             </div>
             <div className="modal-actions">
               <button type="button" className="btn-ghost" onClick={() => setStatsOpen(false)}>

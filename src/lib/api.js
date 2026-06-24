@@ -139,22 +139,19 @@ export async function getHistory(householdId) {
   return data ?? []
 }
 
-// Statistiques « depuis toujours » : par personne, nombre de sorties courses et
-// total d'articles achetés. Agrégé côté client à partir de tout l'historique.
+// Statistiques « depuis toujours » : nombre de sorties courses par personne.
+// Agrégé côté client à partir de tout l'historique.
 export async function getStats(householdId) {
   const { data, error } = await supabase
     .from('shopping_trips')
-    .select('shopper_name, item_count')
+    .select('shopper_name')
     .eq('household_id', householdId)
   if (error) throw error
   const map = new Map()
   for (const t of data ?? []) {
-    const s = map.get(t.shopper_name) || { name: t.shopper_name, trips: 0, items: 0 }
-    s.trips += 1
-    s.items += t.item_count || 0
-    map.set(t.shopper_name, s)
+    map.set(t.shopper_name, (map.get(t.shopper_name) || 0) + 1)
   }
-  return [...map.values()]
+  return [...map.entries()].map(([name, trips]) => ({ name, trips }))
 }
 
 // --- Action « Je pars faire les courses » ------------------------------------
