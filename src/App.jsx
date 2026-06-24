@@ -4,6 +4,7 @@ import * as api from './lib/api'
 import { enablePush, pushSupported, pushPermission } from './lib/push'
 import { initPress } from './lib/press'
 import { parsePrice, sanitizePriceInput } from './lib/price'
+import { uuid } from './lib/uuid'
 import { useLang, useCurrency } from './lib/i18n'
 import Onboarding from './components/Onboarding'
 import Header from './components/Header'
@@ -261,11 +262,30 @@ export default function App() {
   const hid = member?.household_id
 
   async function handleAdd(name, qty) {
+    // Optimistic UI : on affiche l'article AVANT la confirmation serveur. On
+    // génère l'uuid côté client et on le réutilise comme id en base → même clé
+    // partout, donc pas de remontage ni de double animation à la réconciliation.
+    const id = uuid()
+    const trimmedQty = qty && qty.trim() ? qty.trim() : null
+    const optimistic = {
+      id,
+      name: name.trim(),
+      quantity: trimmedQty,
+      checked: false,
+      created_at: new Date().toISOString(),
+      addedBy: { display_name: member.display_name, color: member.color },
+    }
+    // En haut : cohérent avec le tri serveur (non cochés, plus récents d'abord).
+    setItems((prev) => [optimistic, ...prev])
+
     try {
       skipItemsEchoUntil.current = Date.now() + 1500
-      await api.addItem(hid, member.id, name, qty)
-      await loadItems(hid)
+      await api.addItem(hid, member.id, name, qty, id)
+      // Pas de loadItems : la ligne est déjà à l'écran avec le bon id. L'écho
+      // temps réel est ignoré (skipItemsEchoUntil) ; les autres appareils, eux,
+      // reçoivent l'INSERT et se synchronisent normalement.
     } catch (err) {
+      setItems((prev) => prev.filter((it) => it.id !== id)) // rollback
       showToast(err.message || t('err_add'), 'error')
     }
   }

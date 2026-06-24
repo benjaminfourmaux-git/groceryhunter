@@ -99,8 +99,13 @@ export async function getItems(householdId) {
   return data ?? []
 }
 
-export async function addItem(householdId, userId, name, quantity) {
+// `id` est fourni par le client (uuid) pour l'« optimistic UI » : la ligne
+// affichée tout de suite et la ligne en base partagent la même clé, donc aucun
+// remontage ni double animation à la réconciliation. Absent → le défaut SQL
+// (gen_random_uuid) prend le relais.
+export async function addItem(householdId, userId, name, quantity, id) {
   const { error } = await supabase.from('items').insert({
+    ...(id ? { id } : {}),
     household_id: householdId,
     added_by: userId,
     name: name.trim(),
