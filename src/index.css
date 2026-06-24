@@ -78,10 +78,16 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* En PWA standalone iOS, `height: 100%` ne remplit pas toujours l'écran réel
+   (toolbar dynamique, zones sûres) → bande blanche en bas. `100dvh` suit la
+   hauteur visible réelle. On garde `100%` en repli pour les rares moteurs sans
+   dvh. `body` est étendu de même : sinon son `overflow: hidden` rognerait le
+   bas de `#root` (le dock). */
 html,
 body,
 #root {
   height: 100%;
+  height: 100dvh;
 }
 
 /* Le dégradé clair est porté par <html> : il remplit aussi la moindre zone
@@ -155,6 +161,7 @@ h2 {
   display: flex;
   flex-direction: column;
   height: 100%;
+  height: 100dvh;
   max-width: 480px;
   margin: 0 auto;
   background: transparent;
@@ -179,8 +186,11 @@ h2 {
 .appbar {
   position: relative;
   z-index: 10;
-  margin: 0 10px;
-  padding: calc(var(--safe-top) + 12px) 16px 13px;
+  /* La bulle verte FLOTTE : marge haute = zone sûre (Dynamic Island / barre
+     d'état) + 10px, symétrique avec les 10px latéraux. Plus de vert collé au
+     bord supérieur ni passant sous l'encoche. */
+  margin: calc(var(--safe-top) + 10px) 10px 0;
+  padding: 12px 16px 13px;
   color: #fff;
   background: linear-gradient(165deg, var(--brand), var(--brand-2));
   border-radius: 28px;
@@ -220,7 +230,7 @@ h2 {
 }
 
 .appbar h1 {
-  font-size: 19px;
+  font-size: 25px;
   line-height: 1.15;
   flex: 1;
   min-width: 0;
