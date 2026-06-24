@@ -1313,13 +1313,34 @@ h2 {
     transform: translateY(100%);
   }
 }
+/* Poignée = zone tactile pleine largeur (le glissé vertical pilote le volet,
+   pas le scroll). La barrette visible est dessinée en ::before. La zone déborde
+   vers le bas (sur le titre, non interactif) : hauteur ↑ + marge basse négative
+   pour ne PAS décaler le contenu, et z-index pour capter les taps par-dessus. */
 .modal-grip {
   display: block;
+  width: 100%;
+  height: 46px;
+  margin: -4px 0 -14px;
+  position: relative;
+  z-index: 1;
+  flex: none;
+  cursor: grab;
+  touch-action: none;
+}
+.modal-grip:active {
+  cursor: grabbing;
+}
+.modal-grip::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
   width: 40px;
   height: 5px;
   border-radius: var(--pill);
   background: var(--hairline-2);
-  margin: 0 auto 18px;
 }
 .modal-emoji {
   display: inline-flex;

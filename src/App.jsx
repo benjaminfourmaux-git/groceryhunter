@@ -11,6 +11,7 @@ import Header from './components/Header'
 import ShoppingList from './components/ShoppingList'
 import History from './components/History'
 import StatsPanel from './components/StatsPanel'
+import BottomSheet from './components/BottomSheet'
 import Icon from './components/Icon'
 import SettingsMenu from './components/SettingsMenu'
 
@@ -533,102 +534,105 @@ export default function App() {
       </div>
 
       {confirming && (
-        <div className="modal-overlay" onClick={() => setConfirming(false)}>
-          <div className="modal sheet" onClick={(e) => e.stopPropagation()}>
-            <span className="modal-grip" aria-hidden="true" />
-            <div className="sheet-head">
-              <h2>{t('did_shopping')}</h2>
-              <p className="muted">
-                {allBought ? t('sheet_hint_all') : t('sheet_hint_partial', { n: keptCount })}
-              </p>
-            </div>
+        <BottomSheet className="sheet" onClose={() => setConfirming(false)}>
+          {(close) => (
+            <>
+              <div className="sheet-head">
+                <h2>{t('did_shopping')}</h2>
+                <p className="muted">
+                  {allBought ? t('sheet_hint_all') : t('sheet_hint_partial', { n: keptCount })}
+                </p>
+              </div>
 
-            <ul className="confirm-list">
-              {items.map((it) => {
-                const on = bought.has(it.id)
-                return (
-                  <li
-                    key={it.id}
-                    className={'confirm-item' + (on ? ' on' : '')}
-                    onClick={() => toggleBought(it.id)}
-                  >
-                    <span className="checkbox" aria-hidden="true">
-                      {on && <Icon name="check" size={15} strokeWidth={3} />}
-                    </span>
-                    <span className="confirm-name">{it.name}</span>
-                    {it.quantity && <span className="qty-badge">{it.quantity}</span>}
-                  </li>
-                )
-              })}
-            </ul>
+              <ul className="confirm-list">
+                {items.map((it) => {
+                  const on = bought.has(it.id)
+                  return (
+                    <li
+                      key={it.id}
+                      className={'confirm-item' + (on ? ' on' : '')}
+                      onClick={() => toggleBought(it.id)}
+                    >
+                      <span className="checkbox" aria-hidden="true">
+                        {on && <Icon name="check" size={15} strokeWidth={3} />}
+                      </span>
+                      <span className="confirm-name">{it.name}</span>
+                      {it.quantity && <span className="qty-badge">{it.quantity}</span>}
+                    </li>
+                  )
+                })}
+              </ul>
 
-            <label className="price-field">
-              <span className="price-field-label">
-                {t('price_label')} <em className="optional">{t('optional')}</em>
-              </span>
-              <span className="price-input-wrap">
-                <input
-                  className="price-input"
-                  inputMode="decimal"
-                  value={price}
-                  onChange={(e) => setPrice(sanitizePriceInput(e.target.value))}
-                  placeholder={t('price_ph')}
-                  maxLength={10}
-                />
-                <span className="price-cur">{currencySymbol}</span>
-              </span>
-            </label>
+              <label className="price-field">
+                <span className="price-field-label">
+                  {t('price_label')} <em className="optional">{t('optional')}</em>
+                </span>
+                <span className="price-input-wrap">
+                  <input
+                    className="price-input"
+                    inputMode="decimal"
+                    value={price}
+                    onChange={(e) => setPrice(sanitizePriceInput(e.target.value))}
+                    placeholder={t('price_ph')}
+                    maxLength={10}
+                  />
+                  <span className="price-cur">{currencySymbol}</span>
+                </span>
+              </label>
 
-            <div className="modal-actions">
-              <button type="button" className="btn-ghost" onClick={() => setConfirming(false)}>
-                {t('cancel')}
-              </button>
-              <button type="button" className="btn-primary" onClick={confirmGo} disabled={goBusy}>
-                {goBusy ? t('saving') : allBought ? t('confirm_all') : t('confirm_partial')}
-              </button>
-            </div>
-          </div>
-        </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost" onClick={close}>
+                  {t('cancel')}
+                </button>
+                <button type="button" className="btn-primary" onClick={confirmGo} disabled={goBusy}>
+                  {goBusy ? t('saving') : allBought ? t('confirm_all') : t('confirm_partial')}
+                </button>
+              </div>
+            </>
+          )}
+        </BottomSheet>
       )}
 
       {leaving && (
-        <div className="modal-overlay" onClick={() => setLeaving(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <span className="modal-grip" aria-hidden="true" />
-            <span className="modal-emoji danger" aria-hidden="true">
-              <Icon name="logout" size={24} />
-            </span>
-            <h2>{t('leave_title')}</h2>
-            <p className="muted">{t('leave_body')}</p>
-            <div className="modal-actions">
-              <button type="button" className="btn-ghost" onClick={() => setLeaving(false)}>
-                {t('cancel')}
-              </button>
-              <button type="button" className="btn-danger" onClick={handleLeave}>
-                {t('leave_confirm')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <BottomSheet onClose={() => setLeaving(false)}>
+          {(close) => (
+            <>
+              <span className="modal-emoji danger" aria-hidden="true">
+                <Icon name="logout" size={24} />
+              </span>
+              <h2>{t('leave_title')}</h2>
+              <p className="muted">{t('leave_body')}</p>
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost" onClick={close}>
+                  {t('cancel')}
+                </button>
+                <button type="button" className="btn-danger" onClick={handleLeave}>
+                  {t('leave_confirm')}
+                </button>
+              </div>
+            </>
+          )}
+        </BottomSheet>
       )}
 
       {statsOpen && (
-        <div className="modal-overlay" onClick={() => setStatsOpen(false)}>
-          <div className="modal sheet" onClick={(e) => e.stopPropagation()}>
-            <span className="modal-grip" aria-hidden="true" />
-            <div className="sheet-head">
-              <h2>{t('stats_title')}</h2>
-            </div>
-            <div className="stats-scroll">
-              <StatsPanel members={members} stats={stats} />
-            </div>
-            <div className="modal-actions">
-              <button type="button" className="btn-ghost" onClick={() => setStatsOpen(false)}>
-                {t('close')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <BottomSheet className="sheet" onClose={() => setStatsOpen(false)}>
+          {(close) => (
+            <>
+              <div className="sheet-head">
+                <h2>{t('stats_title')}</h2>
+              </div>
+              <div className="stats-scroll">
+                <StatsPanel members={members} stats={stats} />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost" onClick={close}>
+                  {t('close')}
+                </button>
+              </div>
+            </>
+          )}
+        </BottomSheet>
       )}
 
       <SettingsMenu
