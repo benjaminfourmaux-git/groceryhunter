@@ -1391,9 +1391,71 @@ button.settings-row:active {
    Ils sont déjà posés sur la surface frostée de la modale : on retire leur flou
    propre (rendu visuel identique) et le saut disparaît. */
 .settings-row .icon-btn.lang,
-.settings-row .icon-btn.currency {
+.settings-row .icon-btn.currency,
+.morph .icon-btn.lang,
+.morph .icon-btn.currency {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+/* ---------- Menu Réglages « morph » ----------
+   Le rond ⋯ de l'en-tête se métamorphose en panneau liquid-glass. La géométrie
+   (width/height/left/top/border-radius) est pilotée en JS ; ici l'apparence. */
+.morph-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: transparent; /* capte le clic extérieur, sans voile de modale */
+}
+.morph {
+  position: fixed;
+  z-index: 41;
+  overflow: hidden;
+  background: var(--glass-dock);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
+  backdrop-filter: blur(var(--blur)) saturate(180%);
+  border: 1px solid var(--hairline-2);
+  box-shadow: var(--shadow-pop);
+  color: var(--text);
+  text-align: left;
+  will-change: width, height, left, top;
+}
+/* Icône ⋯ (état rond) : croisée en fondu avec le menu. */
+.morph-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: opacity 0.16s var(--ease);
+}
+.morph.is-open .morph-icon {
+  opacity: 0;
+  pointer-events: none;
+}
+/* Menu : épinglé en haut-droite (le coin ancré), taille finale fixée en JS, donc
+   pas de reflow pendant que le rond grandit — il est juste dévoilé. */
+.morph-menu {
+  position: absolute;
+  top: 0;
+  right: 0;
+  box-sizing: border-box;
+  padding: 12px 14px 14px;
+  opacity: 0;
+  pointer-events: none;
+  overflow-y: auto;
+  transition: opacity 0.24s var(--ease);
+}
+.morph.is-open .morph-menu {
+  opacity: 1;
+  pointer-events: auto;
+}
+.morph .sheet-head h2 {
+  font-size: var(--fs-xl);
+}
+.morph .settings-list {
+  margin: 10px 0 0;
 }
 
 /* Variante : feuille « J'ai fait les courses » avec liste cochable. */

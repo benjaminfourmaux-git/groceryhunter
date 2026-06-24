@@ -11,8 +11,7 @@ import ShoppingList from './components/ShoppingList'
 import History from './components/History'
 import StatsPanel from './components/StatsPanel'
 import Icon from './components/Icon'
-import LangToggle from './components/LangToggle'
-import CurrencyToggle from './components/CurrencyToggle'
+import SettingsMenu from './components/SettingsMenu'
 
 export default function App() {
   const { t, lang } = useLang()
@@ -33,7 +32,10 @@ export default function App() {
   const [statsOpen, setStatsOpen] = useState(false)
   const [stats, setStats] = useState([])
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [settingsClosing, setSettingsClosing] = useState(false)
+  // Le morph Réglages est « présent » de l'ouverture jusqu'à la FIN de la
+  // fermeture : on masque le bouton ⋯ tant qu'il l'est (sinon on verrait le rond
+  // par défaut en double pendant la résorption).
+  const [menuMounted, setMenuMounted] = useState(false)
   const [toast, setToast] = useState(null)
 
   const channelRef = useRef(null)
@@ -41,6 +43,7 @@ export default function App() {
   // on ignore l'écho temps réel (qui arrive plus tard) pour éviter un 2e rendu
   // qui rejoue l'animation d'entrée (« rebond joué deux fois »).
   const skipItemsEchoUntil = useRef(0)
+  const settingsBtnRef = useRef(null) // ancre du « morph » Réglages (le bouton ⋯)
   const tabbarRef = useRef(null)
   const indicatorRef = useRef(null)
   const viewRef = useRef(view)
@@ -52,19 +55,6 @@ export default function App() {
     () => Object.fromEntries(members.map((m) => [m.display_name, m.color])),
     [members]
   )
-
-  // Ferme le volet de réglages en jouant l'animation de sortie (glissé vers le
-  // bas) avant de le démonter, façon volet roulant. `after` permet d'enchaîner
-  // (ex. ouvrir la confirmation « quitter le foyer ») une fois le volet sorti.
-  const SETTINGS_EXIT_MS = 300
-  function closeSettings(after) {
-    setSettingsClosing(true)
-    setTimeout(() => {
-      setSettingsOpen(false)
-      setSettingsClosing(false)
-      after?.()
-    }, SETTINGS_EXIT_MS)
-  }
 
   // Effet « press organique » sur tous les boutons (une seule fois).
   useEffect(() => initPress(), [])
@@ -411,7 +401,9 @@ export default function App() {
         household={member.household}
         members={members}
         onShowStats={handleShowStats}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={() => { setMenuMounted(true); setSettingsOpen(true) }}
+        hideSettingsBtn={menuMounted}
+        settingsBtnRef={settingsBtnRef}
       />
 
       <main className={'content' + (view === 'list' ? ' has-cta' : '')} key={view}>
@@ -567,67 +559,15 @@ export default function App() {
         </div>
       )}
 
-      {settingsOpen && (() => {
-        const bellLabel =
-          pushState === 'granted' ? t('bell_on')
-          : pushState === 'denied' ? t('bell_blocked')
-          : t('bell_enable')
-        return (
-          <div
-            className={'modal-overlay' + (settingsClosing ? ' closing' : '')}
-            onClick={() => closeSettings()}
-          >
-            <div
-              className={'modal sheet' + (settingsClosing ? ' closing' : '')}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <span className="modal-grip" aria-hidden="true" />
-              <div className="sheet-head">
-                <h2>{t('settings_title')}</h2>
-              </div>
-
-              <div className="settings-list">
-                <div className="settings-row">
-                  <span className="settings-label">{t('settings_notifications')}</span>
-                  <button
-                    type="button"
-                    className={'icon-btn bell ' + pushState}
-                    onClick={handleEnablePush}
-                    disabled={pushState === 'granted' || pushState === 'denied'}
-                    aria-label={bellLabel}
-                    title={bellLabel}
-                  >
-                    <Icon name="bell" size={20} />
-                    {pushState === 'granted' && <span className="bell-dot" />}
-                  </button>
-                </div>
-                <div className="settings-row">
-                  <span className="settings-label">{t('settings_language')}</span>
-                  <LangToggle />
-                </div>
-                <div className="settings-row">
-                  <span className="settings-label">{t('settings_currency')}</span>
-                  <CurrencyToggle />
-                </div>
-                <button
-                  type="button"
-                  className="settings-row danger"
-                  onClick={() => closeSettings(() => setLeaving(true))}
-                >
-                  <span className="settings-label">{t('leave')}</span>
-                  <Icon name="logout" size={19} />
-                </button>
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" className="btn-ghost" onClick={() => closeSettings()}>
-                  {t('close')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-      })()}
+      <SettingsMenu
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onClosed={() => setMenuMounted(false)}
+        anchorRef={settingsBtnRef}
+        pushState={pushState}
+        onEnablePush={handleEnablePush}
+        onLeave={() => setLeaving(true)}
+      />
 
       {toast && <div className={'toast ' + toast.kind}>{toast.msg}</div>}
     </div>

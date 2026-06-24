@@ -3,7 +3,7 @@ import Icon from './Icon'
 import Avatar from './Avatar'
 import { useLang } from '../lib/i18n'
 
-export default function Header({ household, members, onShowStats, onOpenSettings }) {
+export default function Header({ household, members, onShowStats, onOpenSettings, hideSettingsBtn, settingsBtnRef }) {
   const { t } = useLang()
   const [copied, setCopied] = useState(false)
 
@@ -22,11 +22,15 @@ export default function Header({ household, members, onShowStats, onOpenSettings
       <div className="appbar-row">
         <h1>{household.name}</h1>
         <button
+          ref={settingsBtnRef}
           type="button"
           className="icon-btn"
           onClick={onOpenSettings}
           aria-label={t('settings_title')}
           title={t('settings_title')}
+          // Masqué tant que le « morph » est à l'écran (jusqu'à la fin de la
+          // fermeture) : il prend sa place, et on évite le rond en double.
+          style={{ opacity: hideSettingsBtn ? 0 : 1 }}
         >
           <Icon name="more" size={20} />
         </button>
