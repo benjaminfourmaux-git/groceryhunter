@@ -1417,7 +1417,18 @@ button.settings-row:active {
   position: fixed;
   inset: 0;
   z-index: 40;
-  background: transparent; /* capte le clic extérieur, sans voile de modale */
+  /* Capte le clic extérieur ET porte un léger flou d'arrière-plan qui se fond à
+     l'ouverture du panneau (piloté par .is-open, comme le panneau). */
+  background: transparent;
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+  transition: background 0.3s var(--ease),
+    -webkit-backdrop-filter 0.3s var(--ease), backdrop-filter 0.3s var(--ease);
+}
+.morph-scrim.is-open {
+  background: rgba(20, 32, 12, 0.06);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
 }
 .morph {
   position: fixed;

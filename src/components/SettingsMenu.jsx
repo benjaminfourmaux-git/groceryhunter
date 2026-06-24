@@ -165,7 +165,7 @@ export default function SettingsMenu({ open, onClose, onClosed, anchorRef, pushS
   return (
     <>
       {/* Capte le clic extérieur, sans voile de modale (on garde l'effet morph). */}
-      <div className="morph-scrim" onClick={onClose} />
+      <div className={'morph-scrim' + (expanded ? ' is-open' : '')} onClick={onClose} />
       <div
         ref={morphRef}
         className={'morph' + (expanded ? ' is-open' : '')}
