@@ -10,11 +10,10 @@ import { useLang } from '../lib/i18n'
 // panneau — pas un scale, pour ne pas déformer le contenu. La taille finale est
 // mesurée en JS. Courbes en LITTÉRAL : `var()` dans une transition posée en JS
 // ne se parse pas sur Safari mobile.
-const PANEL_MAX_W = 360
 const MARGIN = 10
-const SPRING = 'cubic-bezier(0.34, 1.18, 0.55, 1)' // rebond léger (overshoot réduit)
+const SPRING = 'cubic-bezier(0.34, 1.15, 0.55, 1)' // rebond léger (overshoot réduit)
 const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
-const DUR = 0.4 // s
+const DUR = 0.3 // s
 
 function reduceMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -24,10 +23,14 @@ function geomTransition(reduce) {
   if (reduce) return 'none'
   // Pas de transition de border-radius : il reste constant (= rayon du cercle),
   // pour que l'arc haut-droit reste confondu avec le rond à tout instant.
+  // On anime aussi le flou (backdrop-filter) et l'ombre : l'état rond n'en a pas
+  // (= clone du bouton ⋯), le panneau si → l'échange final est invisible.
   return (
     `left ${DUR}s ${SPRING}, top ${DUR}s ${SPRING}, ` +
     `width ${DUR}s ${SPRING}, height ${DUR}s ${SPRING}, ` +
-    `background-color ${DUR}s ${EASE}, border-color ${DUR}s ${EASE}`
+    `background-color ${DUR}s ${EASE}, border-color ${DUR}s ${EASE}, ` +
+    `box-shadow ${DUR}s ${EASE}, ` +
+    `-webkit-backdrop-filter ${DUR}s ${EASE}, backdrop-filter ${DUR}s ${EASE}`
   )
 }
 
@@ -51,7 +54,6 @@ export default function SettingsMenu({ open, onClose, onClosed, anchorRef, pushS
 
     const reduce = reduceMotion()
     const b = btn.getBoundingClientRect()
-    const PW = Math.min(PANEL_MAX_W, window.innerWidth - MARGIN * 2)
     // Rayon constant = celui du bouton rond (moitié de sa taille). Un carré à ce
     // rayon EST un cercle ; un rectangle au même rayon garde le coin haut-droit
     // (qui reste ancré en (b.right, b.top)) identique au cercle tout du long.
@@ -64,18 +66,28 @@ export default function SettingsMenu({ open, onClose, onClosed, anchorRef, pushS
       morph.style.width = b.width + 'px'
       morph.style.height = b.height + 'px'
       morph.style.borderRadius = radius + 'px'
-      morph.style.backgroundColor = 'rgba(255, 255, 255, 0.2)' // ~ bouton sur l'en-tête vert
+      // Clone EXACT du bouton ⋯ de l'en-tête : translucide léger, SANS flou ni
+      // ombre. C'est ce qui rend l'échange final (morph → vrai bouton) invisible.
+      morph.style.backgroundColor = 'rgba(255, 255, 255, 0.18)'
       morph.style.borderColor = 'rgba(255, 255, 255, 0.26)'
+      morph.style.boxShadow = 'none'
+      morph.style.backdropFilter = 'blur(0px) saturate(100%)'
+      morph.style.webkitBackdropFilter = 'blur(0px) saturate(100%)'
     }
 
     if (open) {
-      // Mesure de la taille finale du panneau à largeur PW.
+      // Ancrage d'origine : le bord DROIT du panneau reste sous le bouton
+      // (b.right) → coin haut-droit confondu avec le cercle. Le bord GAUCHE est
+      // placé à la même distance du bord d'écran que le bord droit l'est du sien
+      // (marges latérales symétriques) → la largeur en découle.
+      const rightGap = window.innerWidth - b.right
+      const finalLeft = Math.max(MARGIN, rightGap)
+      const PW = b.right - finalLeft
       menu.style.width = PW + 'px'
       menu.style.height = 'auto'
       const natural = menu.scrollHeight
       const H = Math.min(natural, window.innerHeight - b.top - MARGIN)
       menu.style.height = H + 'px'
-      const finalLeft = Math.max(MARGIN, b.right - PW) // ancré au coin haut-droit du bouton
 
       const setPanel = () => {
         morph.style.transition = geomTransition(reduce)
@@ -84,8 +96,12 @@ export default function SettingsMenu({ open, onClose, onClosed, anchorRef, pushS
         morph.style.width = PW + 'px'
         morph.style.height = H + 'px'
         // border-radius inchangé (radius) : coin haut-droit confondu avec le rond.
+        // Valeurs vidées → reprise des règles CSS du panneau (verre + flou + ombre).
         morph.style.backgroundColor = '' // reprend var(--glass-dock) de la feuille
         morph.style.borderColor = ''
+        morph.style.boxShadow = ''
+        morph.style.backdropFilter = ''
+        morph.style.webkitBackdropFilter = ''
         setExpanded(true) // → .is-open : le contenu apparaît en fondu
       }
 
