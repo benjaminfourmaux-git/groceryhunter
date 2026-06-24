@@ -212,6 +212,7 @@ export default function ShoppingList({ items, onAdd, onDelete }) {
         />
         <input
           className="add-qty"
+          inputMode="numeric"
           value={qty}
           onChange={(e) => setQty(e.target.value)}
           placeholder={t('qty_ph')}
