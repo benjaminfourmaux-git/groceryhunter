@@ -1051,10 +1051,12 @@ h2 {
     radial-gradient(70% 50% at 18% 0%, rgba(70, 160, 44, 0.28), transparent 62%),
     radial-gradient(70% 55% at 100% 100%, rgba(150, 205, 100, 0.24), transparent 60%);
 }
+/* Dans le coin haut-droit de la carte de connexion (positionné par rapport à
+   elle : .onboarding-card est en position: relative). */
 .onboarding-lang {
   position: absolute;
-  top: calc(var(--safe-top) + 16px);
-  right: 16px;
+  top: 14px;
+  right: 14px;
   z-index: 2;
 }
 .onboarding-card {

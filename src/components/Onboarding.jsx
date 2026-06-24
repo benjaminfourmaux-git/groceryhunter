@@ -41,11 +41,11 @@ export default function Onboarding({ onCreate, onJoin }) {
 
   return (
     <div className="onboarding">
-      <div className="onboarding-lang">
-        <LangToggle />
-      </div>
-
       <div className="onboarding-card">
+        <div className="onboarding-lang">
+          <LangToggle />
+        </div>
+
         <div className="brand">
           <span className="brand-mark">
             <Icon name="cart" size={26} />
