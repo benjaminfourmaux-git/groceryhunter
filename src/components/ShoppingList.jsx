@@ -190,13 +190,36 @@ export default function ShoppingList({ items, onAdd, onDelete }) {
     prevTops.current = next
   }, [items])
 
-  function submitAdd(e) {
-    e.preventDefault()
+  // Garde anti double-ajout : le submit du formulaire (touche « OK » bleue) et le
+  // blur déclenché par la fermeture du clavier peuvent tirer quasi simultanément
+  // sur la même valeur capturée.
+  const adding = useRef(false)
+
+  function commitAdd() {
     const n = name.trim()
-    if (!n) return
+    if (!n || adding.current) return
+    adding.current = true
     onAdd(n, qty)
     setName('')
     setQty('')
+    setTimeout(() => { adding.current = false }, 120)
+  }
+
+  function submitAdd(e) {
+    e.preventDefault()
+    commitAdd()
+  }
+
+  // Le bouton « OK » du bandeau clavier iOS (et tout ce qui ferme le clavier)
+  // provoque un blur sans focus suivant → on ajoute l'article. En revanche, si le
+  // focus passe à l'autre champ de l'add-bar (navigation ‹ ›), on n'ajoute pas :
+  // l'utilisateur est en train de compléter la quantité.
+  function onFieldBlur() {
+    setTimeout(() => {
+      const active = document.activeElement
+      if (active && active.closest && active.closest('.add-bar')) return
+      commitAdd()
+    }, 50)
   }
 
   return (
@@ -208,6 +231,8 @@ export default function ShoppingList({ items, onAdd, onDelete }) {
           onChange={(e) => setName(e.target.value)}
           placeholder={t('add_item_ph')}
           aria-label={t('aria_item_name')}
+          enterKeyHint="done"
+          onBlur={onFieldBlur}
           maxLength={60}
         />
         <input
@@ -217,6 +242,7 @@ export default function ShoppingList({ items, onAdd, onDelete }) {
           onChange={(e) => setQty(e.target.value)}
           placeholder={t('qty_ph')}
           aria-label={t('aria_qty')}
+          onBlur={onFieldBlur}
           maxLength={12}
         />
         <button type="submit" className="add-btn" aria-label={t('aria_add')} disabled={!name.trim()}>
