@@ -24,6 +24,22 @@ export function pushPermission() {
   return Notification.permission // 'default' | 'granted' | 'denied'
 }
 
+// Détaille POURQUOI le push est indisponible, pour afficher un message
+// actionnable plutôt qu'un « pas pris en charge » sans issue. Renvoie null si OK.
+export function pushUnsupportedReason() {
+  // HTTP hors localhost : service worker & push ne sont même pas exposés.
+  if (typeof window !== 'undefined' && window.isSecureContext === false) return 'insecure'
+  if (pushSupported()) return null
+  // iOS n'expose les API de notifications QUE dans une PWA installée (écran
+  // d'accueil) — jamais dans l'onglet Safari.
+  const ua = navigator.userAgent || ''
+  const iOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const standalone =
+    window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true
+  if (iOS && !standalone) return 'ios-install'
+  return 'unsupported'
+}
+
 // Indique si CE navigateur est déjà abonné.
 export async function isPushEnabled() {
   if (!pushSupported()) return false

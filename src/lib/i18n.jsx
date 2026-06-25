@@ -102,10 +102,13 @@ const fr = {
   err_delete: 'Suppression impossible.',
   err_push: 'Impossible d’activer les notifications.',
   push_on: 'Notifications activées sur cet appareil.',
+  push_ios_install: 'Ajoute l’app à l’écran d’accueil pour activer les notifications.',
+  push_https: 'Les notifications nécessitent une connexion sécurisée (HTTPS).',
+  push_unsupported: 'Les notifications ne sont pas prises en charge sur cet appareil.',
 
   // Historique
-  hist_empty_title: 'Pas encore de courses',
-  hist_empty_body: 'Tes sorties « courses faites » apparaîtront ici.',
+  hist_empty_title: 'Pas encore de courses faites',
+  hist_empty_body: 'Tes virées au supermarché apparaîtront ici.',
   today_at: ({ time }) => `Aujourd’hui à ${time}`,
   yesterday_at: ({ time }) => `Hier à ${time}`,
   items_count: ({ n }) => `${n} article${n > 1 ? 's' : ''}`,
@@ -203,6 +206,9 @@ const en = {
   err_delete: 'Couldn’t delete.',
   err_push: 'Couldn’t enable notifications.',
   push_on: 'Notifications enabled on this device.',
+  push_ios_install: 'Add the app to your Home Screen to enable notifications.',
+  push_https: 'Notifications require a secure (HTTPS) connection.',
+  push_unsupported: 'Notifications aren’t supported on this device.',
 
   hist_empty_title: 'No shopping yet',
   hist_empty_body: 'Your “shopping done” trips will show up here.',

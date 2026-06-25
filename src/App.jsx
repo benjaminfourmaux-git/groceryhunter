@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { supabase, isConfigured } from './supabaseClient'
 import * as api from './lib/api'
-import { enablePush, pushSupported, pushPermission } from './lib/push'
+import { enablePush, pushSupported, pushPermission, pushUnsupportedReason } from './lib/push'
 import { initPress } from './lib/press'
 import { parsePrice, sanitizePriceInput } from './lib/price'
 import { uuid } from './lib/uuid'
@@ -363,6 +363,17 @@ export default function App() {
     }
   }
   async function handleEnablePush() {
+    // Indisponible : message actionnable selon la cause (HTTP, iOS non installé…)
+    // plutôt qu'un « pas pris en charge » sans issue.
+    const reason = pushUnsupportedReason()
+    if (reason) {
+      const key =
+        reason === 'ios-install' ? 'push_ios_install'
+        : reason === 'insecure' ? 'push_https'
+        : 'push_unsupported'
+      showToast(t(key), 'info')
+      return
+    }
     try {
       await enablePush(member)
       setPushState('granted')
