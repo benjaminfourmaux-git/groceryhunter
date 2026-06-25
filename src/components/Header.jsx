@@ -2,18 +2,17 @@ import { useState } from 'react'
 import Icon from './Icon'
 import Avatar from './Avatar'
 import { useLang } from '../lib/i18n'
+import { copyText } from '../lib/clipboard'
 
 export default function Header({ household, members, onShowStats, onOpenSettings, hideSettingsBtn, settingsBtnRef }) {
   const { t } = useLang()
   const [copied, setCopied] = useState(false)
 
   async function copyCode() {
-    try {
-      await navigator.clipboard.writeText(household.join_code)
+    const ok = await copyText(household.join_code)
+    if (ok) {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
-    } catch {
-      // Presse-papiers indisponible : on ne bloque pas.
     }
   }
 
