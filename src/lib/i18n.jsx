@@ -43,15 +43,12 @@ const fr = {
   settings_title: 'Réglages',
   settings_notifications: 'Notifications',
   settings_language: 'Langue',
-  settings_currency: 'Devise',
   bell_on: 'Notifications activées',
   bell_blocked: 'Notifications bloquées',
   bell_enable: 'Activer les notifications',
   copy_code: 'Copier le code du foyer',
   copied: 'Copié !',
   lang_toggle: 'Changer de langue',
-  currency_toggle: 'Changer de devise',
-  members_aria: 'Membres du foyer',
   leave: 'Quitter le foyer',
   leave_title: 'Quitter le foyer ?',
   leave_body:
@@ -59,7 +56,6 @@ const fr = {
   leave_confirm: 'Quitter',
   err_leave: 'Impossible de quitter le foyer.',
   stats_title: 'Classement',
-  stats_trips_unit: ({ n }) => (n > 1 ? 'courses' : 'course'),
   stats_items_unit: ({ n }) => (n > 1 ? 'articles' : 'article'),
   stats_empty: 'Personne n’a encore rien acheté.',
 
@@ -75,29 +71,13 @@ const fr = {
   empty_title: 'La liste est vide',
   empty_body: 'Ajoute ce qui manque à la maison — tout le monde le voit aussitôt.',
 
-  // CTA + feuille « J'ai fait les courses »
-  did_shopping: 'J’ai fait les courses',
-  saving: 'Enregistrement…',
+  // Onglets + boutons communs
   tab_list: 'Liste',
   tab_history: 'Historique',
-  sheet_hint_all: 'Décoche ce que tu n’as pas trouvé : ça restera dans la liste.',
-  sheet_hint_partial: ({ n }) => `${n} article${n > 1 ? 's' : ''} gardé${n > 1 ? 's' : ''} dans la liste.`,
   cancel: 'Annuler',
   close: 'Fermer',
-  price_label: 'Prix des courses',
-  price_ph: '0,00',
-  edit_price: 'Modifier le prix',
-  confirm_all: 'Courses complétées',
-  confirm_partial: 'Courses partielles',
 
   // Toasts
-  toast_nothing: 'Rien d’acheté — la liste ne bouge pas.',
-  toast_done: ({ archived, kept, notified }) => {
-    let m = `Courses faites · ${archived} acheté${archived > 1 ? 's' : ''}`
-    if (kept > 0) m += ` · ${kept} gardé${kept > 1 ? 's' : ''}`
-    if (notified > 0) m += ` · ${notified} prévenu${notified > 1 ? 's' : ''}`
-    return m
-  },
   err_add: 'Impossible d’ajouter l’article.',
   err_action: 'Action impossible.',
   err_delete: 'Suppression impossible.',
@@ -112,7 +92,6 @@ const fr = {
   hist_empty_body: 'Les articles cochés « acheté » restent ici un moment avant de disparaître.',
   today_at: ({ time }) => `Aujourd’hui à ${time}`,
   yesterday_at: ({ time }) => `Hier à ${time}`,
-  items_count: ({ n }) => `${n} article${n > 1 ? 's' : ''}`,
 
   // Écrans d'erreur
   err_config_title: 'Configuration manquante',
@@ -151,15 +130,12 @@ const en = {
   settings_title: 'Settings',
   settings_notifications: 'Notifications',
   settings_language: 'Language',
-  settings_currency: 'Currency',
   bell_on: 'Notifications on',
   bell_blocked: 'Notifications blocked',
   bell_enable: 'Enable notifications',
   copy_code: 'Copy the home code',
   copied: 'Copied!',
   lang_toggle: 'Change language',
-  currency_toggle: 'Change currency',
-  members_aria: 'Home members',
   leave: 'Leave the home',
   leave_title: 'Leave the home?',
   leave_body:
@@ -167,7 +143,6 @@ const en = {
   leave_confirm: 'Leave',
   err_leave: 'Couldn’t leave the home.',
   stats_title: 'Leaderboard',
-  stats_trips_unit: ({ n }) => (n > 1 ? 'trips' : 'trip'),
   stats_items_unit: ({ n }) => (n > 1 ? 'items' : 'item'),
   stats_empty: 'No one has bought anything yet.',
 
@@ -182,27 +157,11 @@ const en = {
   empty_title: 'The list is empty',
   empty_body: 'Add what’s missing at home — everyone sees it right away.',
 
-  did_shopping: 'I did the shopping',
-  saving: 'Saving…',
   tab_list: 'List',
   tab_history: 'History',
-  sheet_hint_all: 'Uncheck anything you couldn’t find — it’ll stay on the list.',
-  sheet_hint_partial: ({ n }) => `${n} item${n > 1 ? 's' : ''} kept on the list.`,
   cancel: 'Cancel',
   close: 'Close',
-  price_label: 'Shopping cost',
-  price_ph: '0.00',
-  edit_price: 'Edit price',
-  confirm_all: 'Shopping done',
-  confirm_partial: 'Partial shopping',
 
-  toast_nothing: 'Nothing bought — the list stays put.',
-  toast_done: ({ archived, kept, notified }) => {
-    let m = `Shopping done · ${archived} bought`
-    if (kept > 0) m += ` · ${kept} kept`
-    if (notified > 0) m += ` · ${notified} notified`
-    return m
-  },
   err_add: 'Couldn’t add the item.',
   err_action: 'Action failed.',
   err_delete: 'Couldn’t delete.',
@@ -216,7 +175,6 @@ const en = {
   hist_empty_body: 'Items you check off stay here for a while before disappearing.',
   today_at: ({ time }) => `Today at ${time}`,
   yesterday_at: ({ time }) => `Yesterday at ${time}`,
-  items_count: ({ n }) => `${n} item${n > 1 ? 's' : ''}`,
 
   err_config_title: 'Missing configuration',
   err_config_body:
@@ -231,10 +189,6 @@ const en = {
 }
 
 const dictionaries = { fr, en }
-
-// Devises proposées (réglage d'UI, comme la langue — pas de conversion).
-const CURRENCIES = ['EUR', 'USD', 'GBP', 'JPY']
-const CURRENCY_SYMBOL = { EUR: '€', USD: '$', GBP: '£', JPY: '¥' }
 
 function translate(lang, key, vars) {
   const dict = dictionaries[lang] || fr
@@ -256,20 +210,8 @@ export function LanguageProvider({ children }) {
     return 'fr'
   })
 
-  const [currency, setCurrency] = useState(() => {
-    try {
-      const saved = localStorage.getItem('currency')
-      if (CURRENCIES.includes(saved)) return saved
-    } catch {
-      /* noop */
-    }
-    return 'EUR'
-  })
-
   const langRef = useRef(lang)
   langRef.current = lang
-  const currencyRef = useRef(currency)
-  currencyRef.current = currency
 
   useEffect(() => {
     try {
@@ -280,15 +222,7 @@ export function LanguageProvider({ children }) {
     document.documentElement.lang = lang
   }, [lang])
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('currency', currency)
-    } catch {
-      /* noop */
-    }
-  }, [currency])
-
-  // Transition fluide partagée (View Transitions) pour langue et devise.
+  // Transition fluide (View Transitions) au changement de langue.
   const animate = useCallback((apply) => {
     const reduce =
       typeof window !== 'undefined' &&
@@ -305,24 +239,14 @@ export function LanguageProvider({ children }) {
     animate(() => setLang(next))
   }, [animate])
 
-  // Devise suivante dans le cycle €, $, £, ¥.
-  const cycleCurrency = useCallback(() => {
-    const i = CURRENCIES.indexOf(currencyRef.current)
-    const next = CURRENCIES[(i + 1) % CURRENCIES.length]
-    animate(() => setCurrency(next))
-  }, [animate])
-
   const value = useMemo(
     () => ({
       lang,
       locale: lang === 'en' ? 'en-GB' : 'fr-FR',
       toggleLang,
       t: (key, vars) => translate(lang, key, vars),
-      currency,
-      currencySymbol: CURRENCY_SYMBOL[currency],
-      cycleCurrency,
     }),
-    [lang, toggleLang, currency, cycleCurrency]
+    [lang, toggleLang]
   )
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>
@@ -332,10 +256,4 @@ export function useLang() {
   const ctx = useContext(LanguageContext)
   if (!ctx) throw new Error('useLang doit être utilisé dans <LanguageProvider>')
   return ctx
-}
-
-export function useCurrency() {
-  const ctx = useContext(LanguageContext)
-  if (!ctx) throw new Error('useCurrency doit être utilisé dans <LanguageProvider>')
-  return { currency: ctx.currency, currencySymbol: ctx.currencySymbol, cycleCurrency: ctx.cycleCurrency }
 }

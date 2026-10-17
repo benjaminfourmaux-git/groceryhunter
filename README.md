@@ -227,7 +227,7 @@ Ce fichier range les clés de connexion. On va le créer dans VS Code.
 > 🔑 **Clés VAPID** (pour les notifications). Une paire a déjà été générée pour toi :
 > - Clé **publique** (à mettre dans `.env`, ligne `VITE_VAPID_PUBLIC_KEY`) :
 >   `BBIxHY3ozWOTx6wi8fY5G_v-aeBDclQPq-4igAo2-3F4UfI185SRNfGA5dxIII6CplJWc49tyw8tenWH-d3a-SE`
-> - Clé **privée** (on s'en servira en PARTIE 5, à garder secrète) :
+> - Clé **privée** (servira à l'envoi des notifications, en pause pour l'instant — à garder secrète) :
 >   `eVbN6mmaBMQ7OuJZlQWEcLU5BXw29j9Ea9oGkBmZZ8Q`
 >
 > Si tu n'as pas encore les notifications en tête, tu peux mettre n'importe quoi sur cette ligne
@@ -320,52 +320,15 @@ application (avec le foyer et les articles déjà créés, puisque les données 
 
 ---
 
-# PARTIE 5 — Activer les notifications (recommandé)
+# PARTIE 5 — Notifications (en pause)
 
-L'app marche déjà sans cette partie. Ici, on ajoute le « Quelqu'un fait les courses » qui prévient
-tout le monde. **Tout se fait dans le navigateur**, sur le tableau de bord Supabase.
+L'app marche entièrement sans cette partie. Depuis le passage aux cases « acheté », **aucune
+notification n'est envoyée** : l'ancienne fonction `go-shopping`, qui prévenait le foyer quand
+quelqu'un appuyait sur « J'ai fait les courses », a été retirée avec ce bouton.
 
-## Étape 5.1 — Créer la fonction qui envoie les notifications
-
-1. Tableau de bord Supabase → menu de gauche → **Edge Functions**.
-2. Clique **Deploy a new function** → choisis **Via Editor** (créer dans l'éditeur).
-3. Donne-lui **exactement** ce nom (sinon l'app ne la trouvera pas) :
-
-   ```
-   go-shopping
-   ```
-
-4. Un éditeur de code s'ouvre avec un exemple. **Efface tout** son contenu.
-5. Dans VS Code, ouvre le fichier `supabase/functions/go-shopping/index.ts`, sélectionne tout
-   (**Ctrl + A**), copie (**Ctrl + C**).
-6. Reviens dans l'éditeur Supabase, colle (**Ctrl + V**).
-7. Clique **Deploy** (Déployer).
-
-✅ **Vérification** : la fonction `go-shopping` apparaît dans la liste des Edge Functions.
-
-## Étape 5.2 — Donner les clés VAPID à la fonction (les « secrets »)
-
-La fonction a besoin de la **clé privée** pour envoyer les notifications. On la range dans les
-secrets (jamais dans l'app visible).
-
-1. Toujours dans **Edge Functions**, cherche l'onglet **Manage** puis **Secrets** (ou
-   « Environment Variables » / « Secrets »).
-2. Ajoute ces **trois** secrets (un par un : un **nom** à gauche, une **valeur** à droite) :
-
-   | Nom | Valeur |
-   |---|---|
-   | `VAPID_PUBLIC_KEY` | `BBIxHY3ozWOTx6wi8fY5G_v-aeBDclQPq-4igAo2-3F4UfI185SRNfGA5dxIII6CplJWc49tyw8tenWH-d3a-SE` |
-   | `VAPID_PRIVATE_KEY` | `eVbN6mmaBMQ7OuJZlQWEcLU5BXw29j9Ea9oGkBmZZ8Q` |
-   | `VAPID_SUBJECT` | `mailto:ton-email@exemple.com` (mets ta vraie adresse) |
-
-3. Enregistre (**Save**).
-
-> ⚠️ Ces trois valeurs doivent correspondre à la clé publique mise dans `.env` à l'étape 3.1.
-> Si tu as gardé celles fournies par défaut, tout concorde.
-
-✅ **Vérification** : les trois secrets `VAPID_...` apparaissent dans la liste.
-
-C'est fini côté Supabase : pas besoin de redéployer le site Netlify pour ça.
+L'abonnement aux notifications (la cloche dans les Réglages) reste en place, prêt à resservir :
+cette partie sera réécrite le jour où l'envoi sera rebranché. Il n'y a rien à faire ici pour
+l'instant.
 
 ---
 
@@ -441,8 +404,7 @@ Supabase chaque jour.
   **`dist`** (et pas le dossier `liste-courses` entier).
 - **Pas de notification sur iPhone** → l'app doit être **installée** via « Sur l'écran d'accueil »
   (pas seulement ouverte dans Safari), et la cloche activée. iOS 16.4 minimum.
-- **Pas de notification ailleurs** → vérifie la PARTIE 5 : fonction `go-shopping` déployée, et les
-  trois secrets `VAPID_...` bien renseignés.
+- **Aucune notification reçue** → c'est normal pour l'instant : l'envoi est en pause (PARTIE 5).
 - **Quelqu'un ne voit pas la liste des autres** → il a rejoint un **autre** foyer. Tout le monde
   doit utiliser le **même code** de foyer.
 
@@ -477,9 +439,7 @@ liste-courses/
 │   ├── components/         # les morceaux d'écran (liste, historique, etc.)
 │   └── lib/                # connexion Supabase, notifications
 └── supabase/
-    ├── schema.sql          # à exécuter dans Supabase (étape 2.3)
-    └── functions/
-        └── go-shopping/    # la fonction des notifications (étape 5.1)
+    └── schema.sql          # à exécuter dans Supabase (étape 2.3)
 ```
 
 Bon courage — en suivant les parties dans l'ordre, tu ne peux pas te tromper. 💚
