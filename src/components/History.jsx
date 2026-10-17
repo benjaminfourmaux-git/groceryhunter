@@ -183,7 +183,7 @@ export default function History({ trips, onUpdatePrice, onDelete, colorByName })
                         if (e.key === 'Enter') e.currentTarget.blur()
                       }}
                       placeholder={t('price_ph')}
-                      maxLength={10}
+                      maxLength={6}
                     />
                     <span className="price-cur">{currencySymbol}</span>
                   </span>

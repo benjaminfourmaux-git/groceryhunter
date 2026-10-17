@@ -585,7 +585,7 @@ export default function App() {
                     value={price}
                     onChange={(e) => setPrice(sanitizePriceInput(e.target.value))}
                     placeholder={t('price_ph')}
-                    maxLength={10}
+                    maxLength={6}
                   />
                   <span className="price-cur">{currencySymbol}</span>
                 </span>
