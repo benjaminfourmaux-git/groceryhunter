@@ -20,18 +20,23 @@ create table if not exists public.households (
 -- Un membre = un appareil/personne. Son id est l'id de l'utilisateur Supabase
 -- (connexion anonyme), ce qui évite tout mot de passe.
 create table if not exists public.members (
-  id            uuid primary key references auth.users(id) on delete cascade,
-  household_id  uuid not null references public.households(id) on delete cascade,
-  display_name  text not null,
-  color         text not null default '#0E8C7F',
-  lang          text not null default 'fr',
-  created_at    timestamptz not null default now()
+  id              uuid primary key references auth.users(id) on delete cascade,
+  household_id    uuid not null references public.households(id) on delete cascade,
+  display_name    text not null,
+  color           text not null default '#0E8C7F',
+  lang            text not null default 'fr',
+  purchases_count int not null default 0,
+  created_at      timestamptz not null default now()
 );
 create index if not exists members_household_idx on public.members(household_id);
--- Migration : ajoute la colonne langue aux bases déjà créées.
+-- Migrations : colonne langue + compteur permanent d'articles achetés.
 alter table public.members add column if not exists lang text not null default 'fr';
+alter table public.members add column if not exists purchases_count int not null default 0;
 
--- La liste de courses courante (les articles « manquants »).
+-- La liste de courses + les articles récemment achetés (cycle unique) :
+--   bought_at vide  → à acheter
+--   bought_at récent → acheté, compte à rebours dans la liste
+--   bought_at + T1 écoulé → affiché dans l'historique, jusqu'à T1+T2 → supprimé.
 create table if not exists public.items (
   id            uuid primary key default gen_random_uuid(),
   household_id  uuid not null references public.households(id) on delete cascade,
@@ -39,9 +44,14 @@ create table if not exists public.items (
   quantity      text,
   checked       boolean not null default false,
   added_by      uuid references public.members(id) on delete set null,
+  bought_at     timestamptz,
+  bought_by     uuid references public.members(id) on delete set null,
   created_at    timestamptz not null default now()
 );
 create index if not exists items_household_idx on public.items(household_id);
+-- Migration : état « acheté » (horodatage + auteur) pour les bases existantes.
+alter table public.items add column if not exists bought_at timestamptz;
+alter table public.items add column if not exists bought_by uuid references public.members(id) on delete set null;
 
 -- L'historique : une entrée par sortie « courses faites ».
 create table if not exists public.shopping_trips (
@@ -261,6 +271,56 @@ end;
 $$;
 
 -- ----------------------------------------------------------------------------
+--  RPC : cocher / décocher un article (« acheté »).
+--  Pose/retire bought_at + bought_by ET ajuste le compteur permanent du membre
+--  de façon atomique. Au décochage, on décrémente l'ACHETEUR d'origine (pas
+--  forcément l'appelant). Idempotent (ne compte pas deux fois).
+-- ----------------------------------------------------------------------------
+create or replace function public.set_item_bought(p_item_id uuid, p_bought boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid   uuid := auth.uid();
+  v_hh    uuid := public.current_household_id();
+  v_buyer uuid;
+  v_was   boolean;
+begin
+  if v_uid is null then
+    raise exception 'Non authentifié';
+  end if;
+
+  select bought_by, (bought_at is not null)
+    into v_buyer, v_was
+    from public.items
+    where id = p_item_id and household_id = v_hh;
+  if not found then
+    return;
+  end if;
+
+  if p_bought then
+    if v_was then return; end if; -- déjà acheté : rien à faire
+    update public.items
+      set bought_at = now(), bought_by = v_uid, checked = true
+      where id = p_item_id;
+    update public.members set purchases_count = purchases_count + 1 where id = v_uid;
+  else
+    if not v_was then return; end if; -- déjà « à acheter »
+    update public.items
+      set bought_at = null, bought_by = null, checked = false
+      where id = p_item_id;
+    if v_buyer is not null then
+      update public.members
+        set purchases_count = greatest(0, purchases_count - 1)
+        where id = v_buyer;
+    end if;
+  end if;
+end;
+$$;
+
+-- ----------------------------------------------------------------------------
 --  RPC keepalive : appelé chaque jour par GitHub Actions pour empêcher la
 --  mise en pause du projet gratuit après 7 jours d'inactivité.
 -- ----------------------------------------------------------------------------
@@ -277,6 +337,7 @@ grant execute on function public.current_household_id() to authenticated;
 grant execute on function public.create_household(text, text, text) to authenticated;
 grant execute on function public.join_household(text, text, text) to authenticated;
 grant execute on function public.leave_household() to authenticated;
+grant execute on function public.set_item_bought(uuid, boolean) to authenticated;
 grant execute on function public.keepalive() to anon, authenticated;
 
 -- ----------------------------------------------------------------------------

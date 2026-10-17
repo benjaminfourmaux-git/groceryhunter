@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Icon from './Icon'
 import LangToggle from './LangToggle'
-import CurrencyToggle from './CurrencyToggle'
 import { useLang } from '../lib/i18n'
 
 // Menu Réglages « morph » : le rond ⋯ de l'en-tête se métamorphose en un panneau
@@ -198,10 +197,6 @@ export default function SettingsMenu({ open, onClose, onClosed, anchorRef, pushS
             <div className="settings-row">
               <span className="settings-label">{t('settings_language')}</span>
               <LangToggle />
-            </div>
-            <div className="settings-row">
-              <span className="settings-label">{t('settings_currency')}</span>
-              <CurrencyToggle />
             </div>
             <button
               type="button"

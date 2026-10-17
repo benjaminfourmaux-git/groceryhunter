@@ -3,11 +3,12 @@ import { supabase, isConfigured } from './supabaseClient'
 import * as api from './lib/api'
 import { enablePush, pushSupported, pushPermission, pushUnsupportedReason } from './lib/push'
 import { initPress } from './lib/press'
-import { parsePrice, sanitizePriceInput } from './lib/price'
 import { uuid } from './lib/uuid'
-import { useLang, useCurrency } from './lib/i18n'
+import { T1_MS, T2_MS } from './lib/config'
+import { useLang } from './lib/i18n'
 import Onboarding from './components/Onboarding'
 import Header from './components/Header'
+import AddBar from './components/AddBar'
 import ShoppingList from './components/ShoppingList'
 import History from './components/History'
 import StatsPanel from './components/StatsPanel'
@@ -15,24 +16,20 @@ import BottomSheet from './components/BottomSheet'
 import Icon from './components/Icon'
 import SettingsMenu from './components/SettingsMenu'
 
+const boughtMsOf = (it) => (it.bought_at ? Date.parse(it.bought_at) : null)
+
 export default function App() {
   const { t, lang } = useLang()
-  const { currencySymbol } = useCurrency()
   const [phase, setPhase] = useState('loading') // loading | onboarding | ready | error
   const [errorMsg, setErrorMsg] = useState(null)
   const [member, setMember] = useState(null)
   const [members, setMembers] = useState([])
   const [items, setItems] = useState([])
-  const [trips, setTrips] = useState([])
+  const [now, setNow] = useState(() => Date.now()) // tick 1s : fait vivre les comptes à rebours
   const [view, setView] = useState('list') // list | history
   const [pushState, setPushState] = useState('default')
-  const [goBusy, setGoBusy] = useState(false)
-  const [confirming, setConfirming] = useState(false)
-  const [bought, setBought] = useState(() => new Set())
-  const [price, setPrice] = useState('')
   const [leaving, setLeaving] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
-  const [stats, setStats] = useState([])
   const [settingsOpen, setSettingsOpen] = useState(false)
   // Le morph Réglages est « présent » de l'ouverture jusqu'à la FIN de la
   // fermeture : on masque le bouton ⋯ tant qu'il l'est (sinon on verrait le rond
@@ -40,31 +37,164 @@ export default function App() {
   const [menuMounted, setMenuMounted] = useState(false)
   const [toast, setToast] = useState(null)
 
+  const hid = member?.household_id
+
   const channelRef = useRef(null)
   // Après une mutation locale sur les articles, on a déjà rechargé la liste :
-  // on ignore l'écho temps réel (qui arrive plus tard) pour éviter un 2e rendu
-  // qui rejoue l'animation d'entrée (« rebond joué deux fois »).
+  // on ignore l'écho temps réel (qui arrive plus tard) pour éviter un 2e rendu.
   const skipItemsEchoUntil = useRef(0)
+  const cleaning = useRef(false)
   const settingsBtnRef = useRef(null) // ancre du « morph » Réglages (le bouton ⋯)
   const tabbarRef = useRef(null)
   const indicatorRef = useRef(null)
   const viewRef = useRef(view)
   viewRef.current = view
 
-  // Table nom → couleur réelle des membres : garantit qu'une même personne
-  // garde la même couleur d'avatar dans la liste, l'historique et les stats.
-  const memberColors = useMemo(
-    () => Object.fromEntries(members.map((m) => [m.display_name, m.color])),
-    [members]
+  // Table id → membre : nom + couleur cohérents dans la liste, l'historique, les stats.
+  const memberById = useMemo(() => Object.fromEntries(members.map((m) => [m.id, m])), [members])
+
+  // ---- Partition dérivée de l'heure courante -------------------------------
+  // À acheter (bought_at vide) + achetés depuis < T1 (compte à rebours, en bas).
+  const listItems = useMemo(() => {
+    const toBuy = []
+    const counting = []
+    for (const it of items) {
+      const b = boughtMsOf(it)
+      if (b == null) toBuy.push(it)
+      else if (now - b < T1_MS) counting.push(it)
+    }
+    toBuy.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)) // récents en haut
+    counting.sort((a, b) => boughtMsOf(a) - boughtMsOf(b)) // le dernier acheté tout en bas
+    return [...toBuy, ...counting]
+  }, [items, now])
+
+  // Historique = achetés depuis ≥ T1 mais < T1+T2.
+  const historyItems = useMemo(
+    () =>
+      items
+        .filter((it) => {
+          const b = boughtMsOf(it)
+          return b != null && now - b >= T1_MS && now - b < T1_MS + T2_MS
+        })
+        .sort((a, b) => boughtMsOf(b) - boughtMsOf(a)),
+    [items, now]
   )
+
+  const toBuyCount = useMemo(() => items.reduce((n, it) => n + (it.bought_at ? 0 : 1), 0), [items])
+
+  const showToast = useCallback((msg, kind = 'info') => {
+    setToast({ msg, kind })
+    setTimeout(() => setToast(null), 3200)
+  }, [])
+
+  const loadItems = useCallback(async (h) => {
+    setItems(await api.getItems(h))
+  }, [])
+  const loadMembers = useCallback(async (h) => {
+    setMembers(await api.getMembers(h))
+  }, [])
 
   // Effet « press organique » sur tous les boutons (une seule fois).
   useEffect(() => initPress(), [])
+
+  // Tick 1s : comptes à rebours + bascule liste↔historique quand T1/T2 passent.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Clavier mobile : l'app garde toute la hauteur de l'écran (le clavier passe
+  // par-dessus et cache la barre d'onglets) ; seule la barre d'ajout se soulève
+  // pour se poser juste au-dessus du clavier (--kb-lift, animé en CSS).
+  // La hauteur du clavier se lit sur le VisualViewport. iOS ne la donne qu'une
+  // fois le clavier ouvert : on réutilise la dernière hauteur connue dès le
+  // focus, pour que la barre monte en même temps que le clavier.
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const root = document.documentElement
+    const GAP = 8 // espace entre la barre d'ajout et le clavier
+    let raf = 0
+    let lastKb = 0
+
+    const apply = (kb) => {
+      const dock = document.querySelector('.dock')
+      const tabbar = document.querySelector('.tabbar')
+      let under = 0 // distance barre d'ajout → bas de l'écran, clavier fermé
+      if (dock && tabbar) {
+        const cs = getComputedStyle(dock)
+        under = tabbar.offsetHeight + (parseFloat(cs.rowGap) || 0) + (parseFloat(cs.paddingBottom) || 0)
+      }
+      const lift = kb > 0 ? Math.max(0, kb + GAP - under) : 0
+      root.style.setProperty('--kb-lift', lift + 'px')
+    }
+
+    const sync = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        root.style.setProperty('--vv-top', vv.offsetTop + 'px')
+        const kb = Math.max(0, Math.round(root.clientHeight - vv.height))
+        if (kb > 0) lastKb = kb
+        apply(kb)
+        // Clavier refermé : annule tout reste de défilement du document.
+        if (kb === 0 && window.scrollY !== 0) window.scrollTo(0, 0)
+      })
+    }
+
+    const inAddBar = (el) => !!(el && el.closest && el.closest('.add-bar'))
+    const onFocusIn = (e) => {
+      if (inAddBar(e.target) && lastKb > 0) apply(lastKb)
+    }
+    const onFocusOut = (e) => {
+      if (inAddBar(e.target) && !inAddBar(e.relatedTarget)) apply(0)
+    }
+
+    vv.addEventListener('resize', sync)
+    vv.addEventListener('scroll', sync)
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('focusout', onFocusOut)
+    sync()
+    return () => {
+      cancelAnimationFrame(raf)
+      vv.removeEventListener('resize', sync)
+      vv.removeEventListener('scroll', sync)
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('focusout', onFocusOut)
+    }
+  }, [])
 
   // Mémorise la langue du membre côté serveur → notifications push localisées.
   useEffect(() => {
     if (member?.id) api.setMemberLang(lang)
   }, [lang, member])
+
+  // Nettoyage paresseux : supprime en base les articles achetés depuis > T1+T2
+  // (déjà invisibles, filtrés des deux vues). Pur entretien, sans infra serveur.
+  useEffect(() => {
+    if (!hid || cleaning.current) return
+    const cutoffMs = Date.now() - (T1_MS + T2_MS)
+    const hasExpired = items.some((it) => {
+      const b = boughtMsOf(it)
+      return b != null && b < cutoffMs
+    })
+    if (!hasExpired) return
+    cleaning.current = true
+    skipItemsEchoUntil.current = Date.now() + 2000
+    api
+      .cleanupExpired(hid, new Date(cutoffMs).toISOString())
+      .then(() =>
+        setItems((prev) =>
+          prev.filter((it) => {
+            const b = boughtMsOf(it)
+            return !(b != null && b < Date.now() - (T1_MS + T2_MS))
+          })
+        )
+      )
+      .catch(() => {})
+      .finally(() => {
+        cleaning.current = false
+      })
+  }, [now, items, hid])
 
   // Slide Liste/Historique : maintien + déplacement linéaire, aimant au relâchement.
   useEffect(() => {
@@ -119,7 +249,6 @@ export default function App() {
           ? 'history'
           : 'list'
 
-      // Aimant : on anime jusqu'à la cible (transition CSS), puis on rend la main.
       ind.style.transition = ''
       ind.style.transform = `translateX(${target === 'history' ? 100 : 0}%)`
       if (target !== viewRef.current) setView(target)
@@ -141,22 +270,6 @@ export default function App() {
       bar.removeEventListener('pointercancel', up)
     }
   }, [phase])
-
-  const showToast = useCallback((msg, kind = 'info') => {
-    setToast({ msg, kind })
-    setTimeout(() => setToast(null), 3200)
-  }, [])
-
-  // ---- Chargements ----------------------------------------------------------
-  const loadItems = useCallback(async (hid) => {
-    setItems(await api.getItems(hid))
-  }, [])
-  const loadMembers = useCallback(async (hid) => {
-    setMembers(await api.getMembers(hid))
-  }, [])
-  const loadHistory = useCallback(async (hid) => {
-    setTrips(await api.getHistory(hid))
-  }, [])
 
   // ---- Démarrage : session anonyme + membre ---------------------------------
   useEffect(() => {
@@ -191,13 +304,11 @@ export default function App() {
   // ---- Quand le membre est connu : données, temps réel, push ----------------
   useEffect(() => {
     if (!member?.household) return
-    const hid = member.household_id
+    const h = member.household_id
 
-    loadItems(hid)
-    loadMembers(hid)
-    loadHistory(hid)
+    loadItems(h)
+    loadMembers(h)
 
-    // Push : refléter l'état et ré-enregistrer l'abonnement si déjà autorisé.
     if (!pushSupported()) {
       setPushState('unsupported')
     } else {
@@ -207,34 +318,20 @@ export default function App() {
       }
     }
 
-    // Abonnement temps réel : on rafraîchit la vue concernée à chaque changement.
     const channel = supabase
-      .channel(`household-${hid}`)
+      .channel(`household-${h}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'items', filter: `household_id=eq.${hid}` },
+        { event: '*', schema: 'public', table: 'items', filter: `household_id=eq.${h}` },
         () => {
           if (Date.now() < skipItemsEchoUntil.current) return // écho de notre propre mutation
-          loadItems(hid)
+          loadItems(h)
         }
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'shopping_trips', filter: `household_id=eq.${hid}` },
-        () => {
-          // Une nouvelle sortie = la liste vient d'être vidée côté serveur.
-          // On recharge AUSSI les articles : l'événement DELETE en masse ne
-          // traverse pas toujours le filtre temps réel (clé seule dans le
-          // payload), donc on s'appuie sur l'INSERT (fiable) pour resynchroniser
-          // la liste de tout le monde en même temps.
-          loadHistory(hid)
-          loadItems(hid)
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'members', filter: `household_id=eq.${hid}` },
-        () => loadMembers(hid)
+        { event: '*', schema: 'public', table: 'members', filter: `household_id=eq.${h}` },
+        () => loadMembers(h) // compteur d'achats mis à jour → classement en direct
       )
       .subscribe()
 
@@ -243,7 +340,7 @@ export default function App() {
       supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [member, loadItems, loadMembers, loadHistory])
+  }, [member, loadItems, loadMembers])
 
   // ---- Actions d'onboarding -------------------------------------------------
   async function handleCreate(householdName, displayName, color) {
@@ -260,39 +357,32 @@ export default function App() {
   }
 
   // ---- Actions liste --------------------------------------------------------
-  const hid = member?.household_id
-
   async function handleAdd(name, qty) {
-    // Optimistic UI : on affiche l'article AVANT la confirmation serveur. On
-    // génère l'uuid côté client et on le réutilise comme id en base → même clé
-    // partout, donc pas de remontage ni de double animation à la réconciliation.
+    // Optimistic UI : on génère l'uuid côté client et on l'affiche avant la
+    // confirmation serveur (même clé partout → pas de remontage ni double anim).
     const id = uuid()
     const trimmedQty = qty && qty.trim() ? qty.trim() : null
     const optimistic = {
       id,
       name: name.trim(),
       quantity: trimmedQty,
-      checked: false,
+      bought_at: null,
+      bought_by: null,
+      added_by: member.id,
       created_at: new Date().toISOString(),
-      addedBy: { display_name: member.display_name, color: member.color },
     }
-    // En haut : cohérent avec le tri serveur (non cochés, plus récents d'abord).
-    setItems((prev) => [optimistic, ...prev])
+    setItems((prev) => [optimistic, ...prev]) // en haut (plus récent)
 
     try {
       skipItemsEchoUntil.current = Date.now() + 1500
-      await api.addItem(hid, member.id, name, qty, id)
-      // Pas de loadItems : la ligne est déjà à l'écran avec le bon id. L'écho
-      // temps réel est ignoré (skipItemsEchoUntil) ; les autres appareils, eux,
-      // reçoivent l'INSERT et se synchronisent normalement.
+      await api.addItem(hid, member.id, name, qty, id, optimistic.created_at)
     } catch (err) {
       setItems((prev) => prev.filter((it) => it.id !== id)) // rollback
       showToast(err.message || t('err_add'), 'error')
     }
   }
+
   async function handleDelete(id) {
-    // Optimistic UI : on retire l'article tout de suite, on confirme en
-    // arrière-plan. En cas d'échec, on le remet à sa place (rollback) + toast.
     const index = items.findIndex((it) => it.id === id)
     if (index === -1) return
     const removed = items[index]
@@ -310,61 +400,29 @@ export default function App() {
       showToast(err.message || t('err_delete'), 'error')
     }
   }
-  async function handleGoShopping(boughtIds, tripPrice) {
-    setConfirming(false)
 
-    // Optimistic UI : on retire tout de suite les articles achetés de la liste
-    // et on pousse la sortie dans l'historique, avant la réponse de l'edge
-    // function. On réconcilie ensuite avec le serveur (id réel de la sortie…).
-    const boughtSet = new Set(boughtIds)
-    const prevItems = items
-    const boughtItems = items.filter((it) => boughtSet.has(it.id))
-    // Les non-achetés restent dans la liste, décochés (comme côté serveur).
-    const keptItems = items
-      .filter((it) => !boughtSet.has(it.id))
-      .map((it) => (it.checked ? { ...it, checked: false } : it))
-    const optimisticTrip =
-      boughtItems.length > 0
-        ? {
-            id: uuid(),
-            shopper_name: member.display_name,
-            // Même format que l'edge function : « nom (quantité) ».
-            items: boughtItems.map((it) => (it.quantity ? `${it.name} (${it.quantity})` : it.name)),
-            item_count: boughtItems.length,
-            price: tripPrice ?? null,
-            created_at: new Date().toISOString(),
-          }
-        : null
-
-    skipItemsEchoUntil.current = Date.now() + 1500
-    setItems(keptItems)
-    if (optimisticTrip) setTrips((prev) => [optimisticTrip, ...prev])
-
-    setGoBusy(true)
+  // Cocher/décocher « acheté ». Optimistic : on pose/retire bought_at tout de
+  // suite (le compte à rebours démarre), le serveur confirme et ajuste le compteur.
+  async function handleToggleBought(id, bought) {
+    const nowIso = new Date().toISOString()
+    const prev = items
+    setItems((list) =>
+      list.map((it) =>
+        it.id === id
+          ? { ...it, bought_at: bought ? nowIso : null, bought_by: bought ? member.id : null }
+          : it
+      )
+    )
     try {
-      const res = await api.goShopping(boughtIds, tripPrice)
-      // Réconciliation : id réel de la sortie, articles côté serveur, etc.
-      await Promise.all([loadItems(hid), loadHistory(hid)])
-      const archived = res?.archived ?? 0
-      const kept = res?.kept ?? 0
-      const notified = res?.notified ?? 0
-      if (archived === 0) {
-        showToast(t('toast_nothing'), 'info')
-      } else {
-        showToast(t('toast_done', { archived, kept, notified }), 'success')
-      }
+      skipItemsEchoUntil.current = Date.now() + 1500
+      await api.setItemBought(id, bought)
     } catch (err) {
-      // Rollback : on restaure la liste et on retire la sortie optimiste.
-      setItems(prevItems)
-      if (optimisticTrip) setTrips((prev) => prev.filter((tr) => tr.id !== optimisticTrip.id))
+      setItems(prev) // rollback
       showToast(err.message || t('err_action'), 'error')
-    } finally {
-      setGoBusy(false)
     }
   }
+
   async function handleEnablePush() {
-    // Indisponible : message actionnable selon la cause (HTTP, iOS non installé…)
-    // plutôt qu'un « pas pris en charge » sans issue.
     const reason = pushUnsupportedReason()
     if (reason) {
       const key =
@@ -390,7 +448,6 @@ export default function App() {
       await api.leaveHousehold()
       setMember(null)
       setItems([])
-      setTrips([])
       setMembers([])
       setView('list')
       setPhase('onboarding')
@@ -399,41 +456,8 @@ export default function App() {
     }
   }
 
-  async function handleShowStats() {
-    setStatsOpen(true)
-    try {
-      setStats(await api.getStats(hid))
-    } catch {
-      setStats([])
-    }
-  }
-
-  async function handleUpdatePrice(id, newPrice) {
-    try {
-      await api.updateTripPrice(id, newPrice)
-      await loadHistory(hid)
-    } catch (err) {
-      showToast(err.message || t('err_action'), 'error')
-    }
-  }
-  async function handleDeleteTrip(id) {
-    // Optimistic UI : on retire la sortie tout de suite, on confirme en
-    // arrière-plan. Rollback à la même position + toast en cas d'échec.
-    const index = trips.findIndex((tr) => tr.id === id)
-    if (index === -1) return
-    const removed = trips[index]
-    setTrips((prev) => prev.filter((tr) => tr.id !== id))
-
-    try {
-      await api.deleteTrip(id)
-    } catch (err) {
-      setTrips((prev) => {
-        const next = [...prev]
-        next.splice(Math.min(index, next.length), 0, removed)
-        return next
-      })
-      showToast(err.message === 'not_deleted' ? t('err_delete') : err.message || t('err_delete'), 'error')
-    }
+  function handleShowStats() {
+    setStatsOpen(true) // les membres portent déjà purchases_count
   }
 
   // ---- Rendu ----------------------------------------------------------------
@@ -453,32 +477,6 @@ export default function App() {
     return <Onboarding onCreate={handleCreate} onJoin={handleJoin} />
   }
 
-  const remaining = items.filter((i) => !i.checked).length
-
-  // ---- Fenêtre « J'ai fait les courses » ------------------------------------
-  function openConfirm() {
-    setBought(new Set(items.map((i) => i.id))) // tout coché par défaut
-    setPrice('')
-    setConfirming(true)
-  }
-  function toggleBought(id) {
-    setBought((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-  const boughtCount = items.reduce((n, i) => n + (bought.has(i.id) ? 1 : 0), 0)
-  const allBought = items.length > 0 && boughtCount === items.length
-  const keptCount = items.length - boughtCount
-  function confirmGo() {
-    handleGoShopping(
-      items.filter((i) => bought.has(i.id)).map((i) => i.id),
-      parsePrice(price)
-    )
-  }
-
   return (
     <div className="app">
       <Header
@@ -492,31 +490,20 @@ export default function App() {
 
       <main className={'content' + (view === 'list' ? ' has-cta' : '')} key={view}>
         {view === 'list' ? (
-          <ShoppingList items={items} onAdd={handleAdd} onDelete={handleDelete} />
-        ) : (
-          <History
-            trips={trips}
-            onUpdatePrice={handleUpdatePrice}
-            onDelete={handleDeleteTrip}
-            colorByName={memberColors}
+          <ShoppingList
+            items={listItems}
+            now={now}
+            memberById={memberById}
+            onToggleBought={handleToggleBought}
+            onDelete={handleDelete}
           />
+        ) : (
+          <History items={historyItems} memberById={memberById} />
         )}
       </main>
 
       <div className="dock">
-        {view === 'list' && (
-          <div className="cta-wrap">
-            <button
-              type="button"
-              className="go-btn"
-              onClick={openConfirm}
-              disabled={goBusy || items.length === 0}
-            >
-              <Icon name="cart" size={21} />
-              <span>{goBusy ? t('saving') : t('did_shopping')}</span>
-            </button>
-          </div>
-        )}
+        {view === 'list' && <AddBar onAdd={handleAdd} />}
 
         <nav className="tabbar" data-active={view} ref={tabbarRef}>
           <span className="tab-indicator" aria-hidden="true" ref={indicatorRef} />
@@ -527,7 +514,7 @@ export default function App() {
           >
             <span className="tab-icon">
               <Icon name="list" size={22} />
-              {remaining > 0 && <span className="tab-badge">{remaining}</span>}
+              {toBuyCount > 0 && <span className="tab-badge">{toBuyCount}</span>}
             </span>
             <span>{t('tab_list')}</span>
           </button>
@@ -543,66 +530,6 @@ export default function App() {
           </button>
         </nav>
       </div>
-
-      {confirming && (
-        <BottomSheet className="sheet" onClose={() => setConfirming(false)}>
-          {(close) => (
-            <>
-              <div className="sheet-head">
-                <h2>{t('did_shopping')}</h2>
-                <p className="muted">
-                  {allBought ? t('sheet_hint_all') : t('sheet_hint_partial', { n: keptCount })}
-                </p>
-              </div>
-
-              <ul className="confirm-list">
-                {items.map((it) => {
-                  const on = bought.has(it.id)
-                  return (
-                    <li
-                      key={it.id}
-                      className={'confirm-item' + (on ? ' on' : '')}
-                      onClick={() => toggleBought(it.id)}
-                    >
-                      <span className="checkbox" aria-hidden="true">
-                        {on && <Icon name="check" size={15} strokeWidth={3} />}
-                      </span>
-                      <span className="confirm-name">{it.name}</span>
-                      {it.quantity && <span className="qty-badge">{it.quantity}</span>}
-                    </li>
-                  )
-                })}
-              </ul>
-
-              <label className="price-field">
-                <span className="price-field-label">
-                  {t('price_label')} <em className="optional">{t('optional')}</em>
-                </span>
-                <span className="price-input-wrap">
-                  <input
-                    className="price-input"
-                    inputMode="decimal"
-                    value={price}
-                    onChange={(e) => setPrice(sanitizePriceInput(e.target.value))}
-                    placeholder={t('price_ph')}
-                    maxLength={6}
-                  />
-                  <span className="price-cur">{currencySymbol}</span>
-                </span>
-              </label>
-
-              <div className="modal-actions">
-                <button type="button" className="btn-ghost" onClick={close}>
-                  {t('cancel')}
-                </button>
-                <button type="button" className="btn-primary" onClick={confirmGo} disabled={goBusy}>
-                  {goBusy ? t('saving') : allBought ? t('confirm_all') : t('confirm_partial')}
-                </button>
-              </div>
-            </>
-          )}
-        </BottomSheet>
-      )}
 
       {leaving && (
         <BottomSheet onClose={() => setLeaving(false)}>
@@ -634,7 +561,7 @@ export default function App() {
                 <h2>{t('stats_title')}</h2>
               </div>
               <div className="stats-scroll">
-                <StatsPanel members={members} stats={stats} />
+                <StatsPanel members={members} />
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn-ghost" onClick={close}>

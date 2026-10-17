@@ -156,12 +156,17 @@ h2 {
 }
 
 /* ---------- Coque application ---------- */
+/* L'app garde toute la hauteur de l'écran, même clavier ouvert : le clavier
+   recouvre la barre d'onglets, et seule la barre d'ajout se soulève au-dessus
+   (--kb-lift, cf. App.jsx). --vv-top la recale si iOS décale la vue. */
 .app {
-  position: relative;
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--vv-top, 0px);
   display: flex;
   flex-direction: column;
   height: 100%;
-  height: 100dvh;
   max-width: 480px;
   margin: 0 auto;
   background: transparent;
@@ -400,7 +405,7 @@ h2 {
 }
 /* En vue Liste, on réserve la place du CTA + de la barre flottante. */
 .content.has-cta {
-  padding-bottom: calc(var(--safe-bottom) + 168px);
+  padding-bottom: calc(var(--safe-bottom) + 168px + var(--kb-lift, 0px));
 }
 @keyframes view-in {
   from {
@@ -415,33 +420,20 @@ h2 {
 
 /* ---------- Vue liste ---------- */
 .list-view {
-  padding: 0 14px 8px;
+  padding: 14px 14px 8px;
 }
 
+/* Barre d'ajout : désormais dans le dock bas, juste au-dessus des onglets. */
 .add-bar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
   display: flex;
   gap: 9px;
-  margin: 0 -14px;
-  padding: 14px 14px 13px;
-}
-/* Bandeau dépoli (pseudo-élément, derrière les champs) : il FLOUTE le fond
-   ambiant au lieu d'y poser un aplat crème opaque qui tranchait sur le dégradé.
-   Il en reprend donc la teinte (raccord invisible en haut) et s'estompe vers le
-   bas par un masque (pas d'arête en bas). Séparé des inputs pour ne pas rogner
-   leur bord inférieur, et hors de leur backdrop-filter (pas de flou imbriqué). */
-.add-bar::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: rgba(238, 243, 225, 0.4);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  -webkit-mask: linear-gradient(180deg, #000 60%, transparent);
-  mask: linear-gradient(180deg, #000 60%, transparent);
+  /* `backwards` (et non `both`) : une fois l'entrée jouée, l'animation ne fige
+     plus `transform`, qui sert au soulèvement au-dessus du clavier. */
+  animation: cta-in 0.4s var(--spring) backwards;
+  transform: translateY(calc(-1 * var(--kb-lift, 0px)));
+  /* Courbe proche de celle du clavier iOS. */
+  transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
 }
 .add-name,
 .add-qty {
@@ -582,27 +574,85 @@ h2 {
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+}
+.item-main .avatar {
+  flex: none;
 }
 .item-name {
+  flex: 1;
+  min-width: 0;
   font-size: 16px;
   font-weight: 600;
   line-height: 1.25;
   word-break: break-word;
   transition: color 0.2s var(--ease);
 }
-.item.checked .item-name {
+.item.bought .item-name {
   text-decoration: line-through;
   text-decoration-color: var(--text-3);
   color: var(--text-2);
 }
-.item-meta {
+
+/* Case « acheté » à droite + anneau de compte à rebours (T1). */
+.buy-check {
+  flex: none;
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  padding: 0;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-2);
+  justify-content: center;
+  cursor: pointer;
+}
+.buy-dot {
+  position: relative;
+  z-index: 1;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--text-3);
+  background: transparent;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.22s var(--spring), border-color 0.22s var(--ease), transform 0.18s var(--spring);
+}
+.buy-check:active .buy-dot {
+  transform: scale(0.85);
+}
+.buy-check.bought .buy-dot {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+.buy-check.bought .buy-dot svg {
+  animation: check-pop 0.3s var(--spring) both;
+}
+.buy-ring {
+  position: absolute;
+  inset: 0;
+  width: 40px;
+  height: 40px;
+  transform: rotate(-90deg); /* le vidage part du haut */
+  pointer-events: none;
+}
+.buy-ring-track {
+  fill: none;
+  stroke: rgba(225, 87, 76, 0.18);
+  stroke-width: 3;
+}
+.buy-ring-fill {
+  fill: none;
+  stroke: var(--danger);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear; /* lisse le vidage entre les ticks d'1 s */
 }
 .qty-badge {
   flex: none;
@@ -670,8 +720,9 @@ h2 {
 .swipe-fg.item:active {
   transform: none; /* pas de scale : il entrerait en conflit avec le translateX */
 }
-/* A11y clavier : Tab sur le bouton supprimer expose la zone rouge à droite. */
-.swipe-row:focus-within .swipe-fg.item {
+/* A11y clavier : seul le focus DU bouton supprimer (dans .swipe-bg) expose la
+   zone rouge — pas le focus de la case « acheté » posée dans le premier plan. */
+.swipe-bg:focus-within ~ .swipe-fg.item {
   transform: translateX(calc(-1 * var(--swipe-reveal)));
 }
 
@@ -696,6 +747,41 @@ h2 {
    zone rouge — pas le focus du bouton prix présent dans le premier plan. */
 .swipe-bg:focus-within ~ .swipe-fg.trip {
   transform: translateX(calc(-1 * var(--swipe-reveal)));
+}
+
+/* ---------- Historique (corbeille récente) ---------- */
+.hist-list {
+  list-style: none;
+  margin: 0;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.hist-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-card);
+  padding: 12px 14px;
+  box-shadow: 0 6px 16px rgba(40, 60, 30, 0.1);
+  animation: item-in 0.42s var(--spring) both;
+}
+.hist-item .avatar {
+  flex: none;
+}
+.hist-item .item-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hist-when {
+  flex: none;
+  white-space: nowrap;
 }
 
 /* ---------- État vide ---------- */
@@ -730,7 +816,7 @@ h2 {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: 0; /* l'app elle-même s'arrête au-dessus du clavier */
   z-index: 20;
   display: flex;
   flex-direction: column;

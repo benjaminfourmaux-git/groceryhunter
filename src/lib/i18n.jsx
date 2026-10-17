@@ -60,12 +60,13 @@ const fr = {
   err_leave: 'Impossible de quitter le foyer.',
   stats_title: 'Classement',
   stats_trips_unit: ({ n }) => (n > 1 ? 'courses' : 'course'),
-  stats_empty: 'Personne n’a encore fait les courses.',
+  stats_items_unit: ({ n }) => (n > 1 ? 'articles' : 'article'),
+  stats_empty: 'Personne n’a encore rien acheté.',
 
   // Liste
   add_item_ph: 'Ajouter un article…',
   qty_ph: 'Qté',
-  aria_item_name: 'Nom de l’article',
+  aria_item_name: 'Article à ajouter',
   aria_qty: 'Quantité (facultatif)',
   aria_add: 'Ajouter',
   aria_check: 'Cocher',
@@ -107,8 +108,8 @@ const fr = {
   push_unsupported: 'Les notifications ne sont pas prises en charge sur cet appareil.',
 
   // Historique
-  hist_empty_title: 'Pas encore de courses faites',
-  hist_empty_body: 'Tes virées au supermarché apparaîtront ici.',
+  hist_empty_title: 'Rien acheté récemment',
+  hist_empty_body: 'Les articles cochés « acheté » restent ici un moment avant de disparaître.',
   today_at: ({ time }) => `Aujourd’hui à ${time}`,
   yesterday_at: ({ time }) => `Hier à ${time}`,
   items_count: ({ n }) => `${n} article${n > 1 ? 's' : ''}`,
@@ -167,11 +168,12 @@ const en = {
   err_leave: 'Couldn’t leave the home.',
   stats_title: 'Leaderboard',
   stats_trips_unit: ({ n }) => (n > 1 ? 'trips' : 'trip'),
-  stats_empty: 'No one has done the shopping yet.',
+  stats_items_unit: ({ n }) => (n > 1 ? 'items' : 'item'),
+  stats_empty: 'No one has bought anything yet.',
 
   add_item_ph: 'Add an item…',
   qty_ph: 'Qty',
-  aria_item_name: 'Item name',
+  aria_item_name: 'Item to add',
   aria_qty: 'Quantity (optional)',
   aria_add: 'Add',
   aria_check: 'Check',
@@ -210,8 +212,8 @@ const en = {
   push_https: 'Notifications require a secure (HTTPS) connection.',
   push_unsupported: 'Notifications aren’t supported on this device.',
 
-  hist_empty_title: 'No shopping yet',
-  hist_empty_body: 'Your “shopping done” trips will show up here.',
+  hist_empty_title: 'Nothing bought recently',
+  hist_empty_body: 'Items you check off stay here for a while before disappearing.',
   today_at: ({ time }) => `Today at ${time}`,
   yesterday_at: ({ time }) => `Yesterday at ${time}`,
   items_count: ({ n }) => `${n} item${n > 1 ? 's' : ''}`,

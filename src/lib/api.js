@@ -79,7 +79,7 @@ export async function setMemberLang(lang) {
 export async function getMembers(householdId) {
   const { data, error } = await supabase
     .from('members')
-    .select('id, display_name, color')
+    .select('id, display_name, color, purchases_count')
     .eq('household_id', householdId)
     .order('created_at', { ascending: true })
   if (error) throw error
@@ -88,13 +88,15 @@ export async function getMembers(householdId) {
 
 // --- Articles ----------------------------------------------------------------
 
+// On renvoie added_by / bought_by en simples uuid : le client résout le membre
+// (nom + couleur) via la liste des membres déjà chargée. Évite les jointures
+// ambiguës (deux FK items → members) et garde une couleur d'avatar cohérente.
 export async function getItems(householdId) {
   const { data, error } = await supabase
     .from('items')
-    .select('id, name, quantity, checked, created_at, addedBy:members(display_name, color)')
+    .select('id, name, quantity, bought_at, bought_by, added_by, created_at')
     .eq('household_id', householdId)
-    .order('checked', { ascending: true })
-    .order('created_at', { ascending: false }) // les plus récents en haut de la pile
+    .order('created_at', { ascending: false })
   if (error) throw error
   return data ?? []
 }
@@ -103,9 +105,12 @@ export async function getItems(householdId) {
 // affichée tout de suite et la ligne en base partagent la même clé, donc aucun
 // remontage ni double animation à la réconciliation. Absent → le défaut SQL
 // (gen_random_uuid) prend le relais.
-export async function addItem(householdId, userId, name, quantity, id) {
+// `createdAt` (facultatif) : même horodatage que la ligne optimiste, pour que
+// l'écho serveur ne change pas l'ordre de la liste (pas de sursaut).
+export async function addItem(householdId, userId, name, quantity, id, createdAt) {
   const { error } = await supabase.from('items').insert({
     ...(id ? { id } : {}),
+    ...(createdAt ? { created_at: createdAt } : {}),
     household_id: householdId,
     added_by: userId,
     name: name.trim(),
@@ -114,8 +119,10 @@ export async function addItem(householdId, userId, name, quantity, id) {
   if (error) throw error
 }
 
-export async function setItemChecked(id, checked) {
-  const { error } = await supabase.from('items').update({ checked }).eq('id', id)
+// Coche / décoche un article (« acheté »). La RPC pose bought_at + bought_by et
+// ajuste le compteur permanent du membre de façon atomique.
+export async function setItemBought(id, bought) {
+  const { error } = await supabase.rpc('set_item_bought', { p_item_id: id, p_bought: bought })
   if (error) throw error
 }
 
@@ -124,64 +131,17 @@ export async function deleteItem(id) {
   if (error) throw error
 }
 
-// --- Historique --------------------------------------------------------------
-
-export async function getHistory(householdId) {
-  const { data, error } = await supabase
-    .from('shopping_trips')
-    // select('*') reste tolérant si la colonne `price` n'existe pas encore
-    // (avant la migration) : l'historique se charge, le prix s'affiche « — ».
-    .select('*')
+// Nettoyage paresseux : supprime les articles achetés depuis plus de T1+T2
+// (expirés de l'historique). Appelé par le client à l'ouverture / au fil du temps.
+export async function cleanupExpired(householdId, cutoffIso) {
+  const { error } = await supabase
+    .from('items')
+    .delete()
     .eq('household_id', householdId)
-    .order('created_at', { ascending: false })
-    .limit(50)
-  if (error) throw error
-  return data ?? []
-}
-
-// Statistiques « depuis toujours » par personne : nombre de sorties courses et
-// total d'articles achetés. Agrégé côté client à partir de tout l'historique.
-export async function getStats(householdId) {
-  const { data, error } = await supabase
-    .from('shopping_trips')
-    .select('shopper_name, item_count')
-    .eq('household_id', householdId)
-  if (error) throw error
-  const map = new Map()
-  for (const t of data ?? []) {
-    const cur = map.get(t.shopper_name) || { trips: 0, items: 0 }
-    cur.trips += 1
-    cur.items += t.item_count || 0
-    map.set(t.shopper_name, cur)
-  }
-  return [...map.entries()].map(([name, { trips, items }]) => ({ name, trips, items }))
-}
-
-// --- Action « Je pars faire les courses » ------------------------------------
-
-// `boughtIds` = identifiants des articles réellement achetés (cochés dans la
-// fenêtre). Les autres restent dans la liste et ne sont pas archivés.
-export async function goShopping(boughtIds, price) {
-  const { data, error } = await supabase.functions.invoke('go-shopping', {
-    body: { boughtIds, price: price ?? null },
-  })
-  if (error) throw error
-  if (data?.error) throw new Error(data.error)
-  return data // { ok, archived, kept, notified }
-}
-
-// Met à jour le prix d'une sortie (édition depuis l'historique).
-export async function updateTripPrice(id, price) {
-  const { error } = await supabase.from('shopping_trips').update({ price }).eq('id', id)
+    .lt('bought_at', cutoffIso)
   if (error) throw error
 }
 
-// Supprime une sortie de l'historique (swipe dans l'historique).
-// `.select()` renvoie les lignes réellement supprimées : si RLS bloque le delete,
-// il n'y a ni erreur ni ligne → on lève pour que l'UI le sache (et ne reste pas
-// coincée « slidée »).
-export async function deleteTrip(id) {
-  const { data, error } = await supabase.from('shopping_trips').delete().eq('id', id).select('id')
-  if (error) throw error
-  if (!data || data.length === 0) throw new Error('not_deleted')
-}
+// L'historique n'a plus de table dédiée : il est dérivé des `items` achetés
+// (bought_at entre T1 et T1+T2) côté client. L'ancien flux « sorties »
+// (shopping_trips, go-shopping, prix) est retiré.

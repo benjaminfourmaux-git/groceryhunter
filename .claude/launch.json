@@ -4,7 +4,7 @@
     {
       "name": "liste-courses",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "5180", "--strictPort"],
+      "runtimeArgs": ["run", "dev", "--", "--port", "5180", "--strictPort", "--host"],
       "port": 5180
     }
   ]
