@@ -1,46 +1,74 @@
 /* ===========================================================================
-   Liste de courses — thème clair « liquid glass » (vert nature + fond crème)
-   Surfaces translucides (backdrop blur + liseré clair + reflet spéculaire),
-   fond ambiant lumineux, et micro-interactions ressort façon iOS.
+   Liste de courses — style « Grand ciel »
+   Un ciel peint en en-tête, une prairie fleurie au-dessus du dock, des cartes
+   crème très arrondies posées sur un fond lin. Deux couleurs d'interface :
+   prairie (marque) et coquelicot (« acheté » / supprimer). Thème clair « plein
+   jour » et thème sombre « crépuscule » (suivant le réglage du téléphone).
    =========================================================================== */
 
 :root {
-  /* Accent vert nature */
-  --brand: #46a02c;
-  --brand-2: #38891f;
-  --brand-deep: #2c6f17;
-  --brand-ink: #ffffff;
-  --brand-glow: rgba(70, 160, 44, 0.42);
-  /* Vert foncé pour le PETIT texte sur fond clair : #46a02c échoue WCAG AA
-     (~3:1), celui-ci passe (~5:1). Réservé au texte, pas aux aplats. */
-  --brand-text: #2c6f17;
+  color-scheme: light dark;
 
-  /* Encre (texte sombre sur fond clair) */
-  --text: #21311a;
-  --text-2: rgba(33, 49, 26, 0.62);
-  --text-3: rgba(33, 49, 26, 0.5);
+  /* Plein jour */
+  --fond: #f2f0e6; /* fond lin de l'app */
+  --nuage: #fdfbf5; /* cartes, champs, barre d'onglets */
+  --nuage-2: #edefe4; /* ligne cochée, rangs du classement */
+  --encre: #2a3a34; /* texte principal, 11:1 sur fond */
+  --encre-2: #5c6b62; /* texte secondaire, 5,3:1 sur fond */
+  --prairie: #3e7a46; /* marque : bouton +, onglet actif, quantités */
+  --coquelicot: #b33a28; /* « acheté », supprimer */
+  --soleil: #e8b23c; /* pastille de compteur, 1er du classement */
+  --on-accent: #fdfbf5; /* texte sur prairie / coquelicot */
+  --on-soleil: #2a3a34;
+  --on-avatar: #fdfbf5;
 
-  /* Verre dépoli clair */
-  --glass: rgba(255, 255, 255, 0.58);
-  --glass-2: rgba(255, 255, 255, 0.74);
-  --glass-3: rgba(255, 255, 255, 0.9);
-  --glass-dock: rgba(255, 255, 255, 0.64);
-  --hairline: rgba(33, 49, 26, 0.1);
-  --hairline-2: rgba(33, 49, 26, 0.16);
-  --specular: rgba(255, 255, 255, 0.9);
+  --ciel: #9ecfe4;
+  --nuage-ciel: #fdfbf5; /* banc de nuages de l'en-tête */
+  --colline: #6fa04f;
+  --colline-2: #3e7a46;
 
-  --danger: #e1574c;
-  --success: #2f9e44;
+  --av-prairie: #3e7a46;
+  --av-coquelicot: #b33a28;
+  --av-lac: #3d6e82;
+  --av-lavande: #7a5a96;
 
-  --radius-card: 18px;
-  --radius-btn: 15px;
+  --hairline: rgba(42, 58, 52, 0.1);
+  --hairline-2: rgba(42, 58, 52, 0.16);
+  --scrim: rgba(32, 48, 40, 0.45);
+
+  --shadow-card: 0 6px 16px rgba(42, 58, 52, 0.08);
+  --shadow-field: 0 4px 12px rgba(42, 58, 52, 0.1);
+  --shadow-pop: 0 6px 18px rgba(42, 58, 52, 0.12);
+  --shadow-glow: 0 8px 18px rgba(62, 122, 70, 0.4);
+  --shadow-sheet: 0 -18px 46px rgba(42, 58, 52, 0.22);
+
+  /* Anciens noms, conservés pour les écrans secondaires (accueil, réglages,
+     erreurs) : ils pointent sur la palette « Grand ciel ». */
+  --brand: var(--prairie);
+  --brand-2: var(--prairie);
+  --brand-deep: var(--prairie);
+  --brand-ink: var(--on-accent);
+  --brand-text: var(--prairie);
+  --brand-glow: rgba(62, 122, 70, 0.35);
+  --text: var(--encre);
+  --text-2: var(--encre-2);
+  --text-3: var(--encre-2);
+  --glass: var(--nuage);
+  --glass-2: var(--nuage);
+  --glass-3: var(--nuage);
+  --glass-dock: var(--nuage);
+  --specular: transparent;
+  --danger: var(--coquelicot);
+  --success: var(--prairie);
+
+  --radius-card: 22px;
+  --radius-btn: 18px;
   --pill: 999px;
 
   --blur: 20px;
   --swipe-reveal: 76px;
 
-  /* Échelle typographique (corps de texte ; les titres display gardent
-     quelques tailles sur mesure : 18 / 19 / 22). */
+  /* Échelle typographique (corps de texte). */
   --fs-2xs: 11px;
   --fs-xs: 12px;
   --fs-sm: 13px;
@@ -58,10 +86,6 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  --shadow-card: inset 0 1px 0 0 var(--specular), 0 6px 16px rgba(40, 60, 30, 0.1);
-  --shadow-pop: 0 18px 46px rgba(40, 60, 30, 0.2);
-  --shadow-glow: 0 12px 26px -10px var(--brand-glow);
-
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 
@@ -69,8 +93,47 @@
   --spring: cubic-bezier(0.34, 1.42, 0.5, 1);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
-    'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+  --font: 'Zen Maru Gothic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  --font-display: 'Klee One', 'Zen Maru Gothic', Georgia, serif;
+}
+
+/* Crépuscule : mêmes rôles, couleurs du soir. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond: #1b2a44;
+    --nuage: #243653;
+    --nuage-2: #2c4162;
+    --encre: #eee6d6;
+    --encre-2: #a9b4c4;
+    --prairie: #7fb07a;
+    --coquelicot: #e8806b;
+    --soleil: #f0c06a; /* la lune */
+    --on-accent: #16233a;
+    --on-soleil: #16233a;
+    --on-avatar: #16233a;
+
+    --ciel: #23375c;
+    --nuage-ciel: #2e4670;
+    --colline: #3f6b47;
+    --colline-2: #2e5236;
+
+    --av-prairie: #7fb07a;
+    --av-coquelicot: #e8806b;
+    --av-lac: #8fb8d8;
+    --av-lavande: #b9a3d6;
+
+    --hairline: rgba(238, 230, 214, 0.12);
+    --hairline-2: rgba(238, 230, 214, 0.2);
+    --scrim: rgba(10, 18, 32, 0.6);
+
+    --shadow-card: 0 6px 16px rgba(8, 14, 26, 0.3);
+    --shadow-field: 0 4px 12px rgba(8, 14, 26, 0.3);
+    --shadow-pop: 0 6px 18px rgba(8, 14, 26, 0.4);
+    --shadow-glow: 0 8px 18px rgba(127, 176, 122, 0.3);
+    --shadow-sheet: 0 -18px 46px rgba(8, 14, 26, 0.5);
+    --brand-glow: rgba(127, 176, 122, 0.3);
+  }
 }
 
 * {
@@ -90,15 +153,9 @@ body,
   height: 100dvh;
 }
 
-/* Le dégradé clair est porté par <html> : il remplit aussi la moindre zone
-   révélée — plus jamais de bande noire au-delà des bords. */
+/* Le fond lin est porté par <html> : il remplit aussi la moindre zone révélée. */
 html {
-  background-color: #eef3e1;
-  background-image:
-    radial-gradient(80% 46% at 12% -2%, rgba(124, 196, 80, 0.34), transparent 60%),
-    radial-gradient(72% 44% at 102% 4%, rgba(70, 160, 44, 0.2), transparent 58%),
-    radial-gradient(98% 58% at 50% 114%, rgba(150, 205, 100, 0.34), transparent 64%);
-  background-repeat: no-repeat;
+  background-color: var(--fond);
 }
 
 /* On verrouille le document : aucun défilement ni rebond élastique au niveau de
@@ -132,9 +189,9 @@ button {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
-/* Sur l'en-tête vert, l'anneau vert disparaîtrait : on le passe en blanc. */
+/* Sur le ciel de l'en-tête, l'anneau passe à l'encre. */
 .appbar :focus-visible {
-  outline-color: #fff;
+  outline-color: var(--encre);
 }
 /* Les champs ont déjà leur halo via :focus ; pas de double anneau. */
 input:focus-visible {
@@ -144,8 +201,9 @@ input:focus-visible {
 h1,
 h2 {
   margin: 0;
-  font-weight: 700;
-  letter-spacing: -0.015em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .muted {
@@ -169,131 +227,111 @@ h2 {
   height: 100%;
   max-width: 480px;
   margin: 0 auto;
-  background: transparent;
+  background: var(--fond);
   overflow: hidden;
   isolation: isolate;
 }
 
-/* Lueur ambiante (même dégradé que <html> => raccord invisible au défilement). */
-.app::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background:
-    radial-gradient(80% 50% at 12% -4%, rgba(124, 196, 80, 0.32), transparent 62%),
-    radial-gradient(70% 50% at 108% 6%, rgba(70, 160, 44, 0.18), transparent 60%),
-    radial-gradient(92% 60% at 50% 116%, rgba(150, 205, 100, 0.3), transparent 66%);
-  pointer-events: none;
-}
-
-/* ---------- Barre supérieure (bulle verte flottante) ---------- */
+/* ---------- En-tête : le ciel peint ---------- */
+/* Le ciel passe sous la zone sûre (barre d'état) ; le contenu se cale en bas. */
 .appbar {
   position: relative;
   z-index: 10;
-  /* La bulle verte FLOTTE : marge haute = zone sûre (Dynamic Island / barre
-     d'état) + 10px, symétrique avec les 10px latéraux. Plus de vert collé au
-     bord supérieur ni passant sous l'encoche. */
-  margin: calc(var(--safe-top) + 10px) 10px 0;
-  padding: 12px 16px 13px;
-  color: #fff;
-  background: linear-gradient(165deg, var(--brand), var(--brand-2));
-  border-radius: 28px;
-  /* Spread négatif (-10px) : l'ombre rentre SOUS la bulle au lieu de déborder
-     au-delà des coins arrondis (ce qui dessinait un « rectangle » vert foncé
-     derrière). Décalage et opacité réduits → halo doux, sans démarcation. */
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 10px 26px -10px rgba(44, 111, 23, 0.32);
+  flex: none;
+  height: calc(var(--safe-top) + 112px);
+  overflow: hidden;
+  color: var(--encre);
 }
-/* Sur l'en-tête vert, les éléments passent en blanc. */
-.appbar .code-chip {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.28);
-  color: #fff;
+.sky-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
-.appbar .code-chip:active {
-  background: rgba(255, 255, 255, 0.3);
+.sky-fill {
+  fill: var(--ciel);
 }
-.appbar .members-count {
-  color: rgba(255, 255, 255, 0.88);
+.sky-bank {
+  fill: var(--nuage-ciel);
 }
-/* Le seul bouton dans l'appbar (« … ») hérite de la couleur #fff du parent. */
-.appbar .icon-btn {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.26);
+.sky-birds {
+  stroke: #fdfbf5;
+}
+.sky-night {
+  display: none;
+}
+@media (prefers-color-scheme: dark) {
+  .sky-day {
+    display: none;
+  }
+  .sky-night {
+    display: inline;
+  }
+}
+/* Les nuages du fond traversent le ciel très lentement (120 s). */
+.sky-drift {
+  animation: sky-drift 120s linear infinite;
+  animation-delay: -38s;
+}
+@keyframes sky-drift {
+  from {
+    transform: translateX(150px);
+  }
+  to {
+    transform: translateX(-380px);
+  }
 }
 
-/* Deux lignes : (titre · …) puis (code · avatars). */
-.appbar-row {
+.appbar-inner {
+  position: relative;
+  height: 100%;
+  box-sizing: border-box;
+  padding: calc(var(--safe-top) + 12px) 12px 14px 20px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  align-items: flex-end;
+  gap: 4px;
 }
-.appbar-row + .appbar-row {
-  margin-top: 10px;
-}
-
-.appbar h1 {
-  font-size: 25px;
-  line-height: 1.15;
+.appbar-text {
   flex: 1;
   min-width: 0;
+}
+.appbar h1 {
+  margin: 0 0 8px;
+  font-size: 30px;
+  line-height: 1.1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.appbar .icon-btn {
+  width: 44px;
+  height: 44px;
+  color: var(--encre);
 }
 
 .code-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid var(--hairline);
-  background: var(--glass-2);
-  color: var(--text);
-  padding: 4px 10px;
+  border: none;
+  background: var(--nuage);
+  color: var(--encre);
+  padding: 6px 12px;
   border-radius: var(--pill);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
+  box-shadow: 0 2px 6px rgba(32, 56, 62, 0.12);
   cursor: pointer;
   transition: transform 0.18s var(--spring), background 0.2s var(--ease);
 }
 .code-chip:active {
   transform: scale(0.95);
-  background: var(--glass-3);
 }
-
-.members-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 0;
-  /* Contour pilule pour signaler que c'est cliquable (cohérent avec .code-chip
-     de la même ligne, sur l'en-tête vert). */
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  background: rgba(255, 255, 255, 0.14);
-  color: inherit;
-  padding: 3px 10px 3px 7px;
-  border-radius: var(--pill);
-  cursor: pointer;
-  transition: transform 0.18s var(--spring), background 0.2s var(--ease);
-}
-.members-row:active {
-  transform: scale(0.96);
-  background: rgba(255, 255, 255, 0.28);
-}
-.members-row .avatar {
-  margin-right: -7px;
-  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.3), 0 0 0 2.5px var(--brand-2);
-}
-.members-count {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-2);
-  margin-left: 13px;
+@media (prefers-color-scheme: dark) {
+  .code-chip {
+    background: rgba(238, 230, 214, 0.16);
+    box-shadow: none;
+  }
 }
 
 /* ---------- Avatars ---------- */
@@ -302,11 +340,11 @@ h2 {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  color: #fff;
-  font-weight: 800;
+  color: var(--on-avatar);
+  font-weight: 700;
   line-height: 1;
   flex: none;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+  transition: opacity 0.25s var(--ease);
 }
 
 /* ---------- Boutons icônes ---------- */
@@ -375,12 +413,12 @@ h2 {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain; /* le défilement reste contenu, pas de rebond noir */
-  padding-bottom: calc(var(--safe-bottom) + 96px);
+  padding-bottom: calc(var(--safe-bottom) + 150px);
   animation: view-in 0.32s var(--ease);
 }
-/* En vue Liste, on réserve la place du CTA + de la barre flottante. */
+/* En vue Liste, on réserve aussi la place de la barre d'ajout. */
 .content.has-cta {
-  padding-bottom: calc(var(--safe-bottom) + 168px + var(--kb-lift, 0px));
+  padding-bottom: calc(var(--safe-bottom) + 214px + var(--kb-lift, 0px));
 }
 @keyframes view-in {
   from {
@@ -395,13 +433,14 @@ h2 {
 
 /* ---------- Vue liste ---------- */
 .list-view {
-  padding: 14px 14px 8px;
+  padding: 16px 16px 8px;
 }
 
 /* Barre d'ajout : désormais dans le dock bas, juste au-dessus des onglets. */
 .add-bar {
   display: flex;
-  gap: 9px;
+  align-items: center;
+  gap: 8px;
   /* `backwards` (et non `both`) : une fois l'entrée jouée, l'animation ne fige
      plus `transform`, qui sert au soulèvement au-dessus du clavier. */
   animation: cta-in 0.4s var(--spring) backwards;
@@ -422,54 +461,50 @@ h2 {
 }
 .add-name,
 .add-qty {
-  border: 1px solid var(--hairline);
-  background: var(--glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: var(--radius-btn);
-  padding: 13px 15px;
-  color: var(--text);
+  border: none;
+  background: var(--nuage);
+  border-radius: var(--pill);
+  padding: 14px 18px;
+  color: var(--encre);
   outline: none;
-  box-shadow: var(--shadow-card);
-  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease);
+  box-shadow: var(--shadow-field);
+  transition: box-shadow 0.2s var(--ease);
 }
 .add-name {
   flex: 1;
   min-width: 0;
 }
 .add-qty {
-  width: 66px;
+  width: 68px;
   text-align: center;
-  padding-left: 8px;
-  padding-right: 8px;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 .add-name::placeholder,
 .add-qty::placeholder {
-  color: var(--text-3);
+  color: var(--encre-2);
 }
 .add-name:focus,
 .add-qty:focus {
-  border-color: rgba(70, 160, 44, 0.6);
-  background: var(--glass-2);
-  box-shadow: 0 0 0 3px rgba(70, 160, 44, 0.2), var(--shadow-card);
+  box-shadow: 0 0 0 3px var(--prairie), var(--shadow-field);
 }
 .add-btn {
   flex: none;
-  width: 48px;
+  width: 52px;
+  height: 52px;
   border: none;
-  border-radius: var(--radius-btn);
-  background: linear-gradient(160deg, var(--brand), var(--brand-2));
-  color: var(--brand-ink);
+  border-radius: var(--pill);
+  background: var(--prairie);
+  color: var(--on-accent);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  transition: transform 0.18s var(--spring), filter 0.2s var(--ease), opacity 0.2s var(--ease);
+  box-shadow: var(--shadow-glow);
+  transition: transform 0.18s var(--spring), opacity 0.2s var(--ease), box-shadow 0.2s var(--ease);
 }
 .add-btn:disabled {
-  opacity: 0.42;
-  filter: saturate(0.4);
+  opacity: 0.45;
   box-shadow: none;
 }
 .add-btn:active:not(:disabled) {
@@ -483,20 +518,17 @@ h2 {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 10px;
 }
 .item {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  background: var(--glass);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  border: 1px solid var(--hairline);
+  background: var(--nuage);
   border-radius: var(--radius-card);
-  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  padding: 14px 12px 14px 16px;
   box-shadow: var(--shadow-card);
-  transition: opacity 0.3s var(--ease), transform 0.25s var(--spring), background 0.2s var(--ease);
+  transition: opacity 0.3s var(--ease), transform 0.25s var(--spring), background 0.25s var(--ease);
   animation: item-in 0.42s var(--spring) both;
 }
 @keyframes item-in {
@@ -518,7 +550,7 @@ h2 {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 9px;
+  gap: var(--space-3);
 }
 .item-main .avatar {
   flex: none;
@@ -527,15 +559,44 @@ h2 {
   flex: 1;
   min-width: 0;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.25;
   word-break: break-word;
   transition: color 0.2s var(--ease);
 }
 .item.bought .item-name {
   text-decoration: line-through;
-  text-decoration-color: var(--text-3);
-  color: var(--text-2);
+  color: var(--encre-2);
+}
+.item.bought .avatar {
+  opacity: 0.55;
+}
+/* « il y a 12 min » sur une ligne cochée. */
+.item-when {
+  flex: none;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--encre-2);
+  white-space: nowrap;
+}
+
+/* Séparateur « En partance » avant les articles cochés. */
+.list-sep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--encre-2);
+  animation: item-in 0.42s var(--spring) both;
+}
+.list-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--hairline-2);
 }
 
 /* Case « acheté » à droite + anneau de compte à rebours (T1). */
@@ -568,23 +629,26 @@ h2 {
 .buy-dot {
   position: relative;
   z-index: 1;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  border: 2px solid var(--text-3);
+  border: 2px solid var(--encre-2);
   background: transparent;
-  color: #fff;
+  color: var(--on-accent);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.22s var(--spring), border-color 0.22s var(--ease), transform 0.18s var(--spring);
+  transition: width 0.22s var(--spring), height 0.22s var(--spring), background 0.22s var(--spring),
+    border-color 0.22s var(--ease), transform 0.18s var(--spring);
 }
 .buy-check.pressed .buy-dot {
   transform: scale(0.85);
 }
 .buy-check.bought .buy-dot {
-  background: var(--danger);
-  border-color: var(--danger);
+  width: 24px;
+  height: 24px;
+  background: var(--coquelicot);
+  border-color: var(--coquelicot);
 }
 .buy-check.bought .buy-dot svg {
   animation: check-pop 0.3s var(--spring) both;
@@ -604,59 +668,87 @@ h2 {
 }
 .buy-ring {
   position: absolute;
-  inset: 0;
-  width: 40px;
-  height: 40px;
+  left: 4px;
+  top: 4px;
+  width: 32px;
+  height: 32px;
   transform: rotate(-90deg); /* le vidage part du haut */
   pointer-events: none;
 }
 .buy-ring-track {
   fill: none;
-  stroke: rgba(225, 87, 76, 0.18);
-  stroke-width: 3;
+  stroke: var(--coquelicot);
+  stroke-opacity: 0.3;
+  stroke-width: 2;
 }
 .buy-ring-fill {
   fill: none;
-  stroke: var(--danger);
-  stroke-width: 3;
+  stroke: var(--coquelicot);
+  stroke-width: 2;
   stroke-linecap: round;
   transition: stroke-dashoffset 1s linear; /* lisse le vidage entre les ticks d'1 s */
 }
+/* Un pétale de coquelicot tombe quand on coche. */
+.petal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9px;
+  height: 12px;
+  margin: -6px 0 0 -4px;
+  border-radius: 60% 60% 60% 10%;
+  background: var(--coquelicot);
+  pointer-events: none;
+  animation: petal-fall 1.1s cubic-bezier(0.3, 0.5, 0.5, 1) forwards;
+}
+@keyframes petal-fall {
+  0% {
+    opacity: 0.95;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-22px, 46px) rotate(140deg);
+  }
+}
 .qty-badge {
   flex: none;
-  background: rgba(70, 160, 44, 0.16);
-  color: var(--brand-text);
-  font-size: var(--fs-sm);
-  font-weight: 800;
-  padding: 4px 11px;
+  background: var(--prairie);
+  color: var(--on-accent);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
   border-radius: var(--pill);
-  border: 1px solid rgba(70, 160, 44, 0.24);
+  white-space: nowrap;
 }
 
 /* ---------- Swipe-to-delete ---------- */
-/* Le li (.swipe-row) porte bordure + rayon + ombre portée + clip. L'article
-   (.swipe-fg) est OPAQUE et glisse par-dessus un fond rouge plein continu
+/* Le li (.swipe-row) porte le rayon, l'ombre portée et le clip. L'article
+   (.swipe-fg) est OPAQUE et glisse par-dessus un fond coquelicot plein
    (.swipe-bg) : aucune démarcation, juste un bord droit article → rouge. */
 .swipe-row {
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--hairline);
   border-radius: var(--radius-card);
-  box-shadow: 0 6px 16px rgba(40, 60, 30, 0.1);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.25s var(--ease);
   animation: item-in 0.42s var(--spring) both;
+}
+.swipe-row.bought {
+  box-shadow: none;
 }
 .swipe-bg {
   position: absolute;
   inset: 0;
   display: flex;
   justify-content: flex-end;
-  background: var(--danger);
+  background: var(--coquelicot);
 }
 .swipe-delete {
   width: var(--swipe-reveal);
   border: none;
   background: transparent;
-  color: #fff;
+  color: var(--on-accent);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -674,18 +766,18 @@ h2 {
   position: relative;
   z-index: 1;
   flex: none;
-  background: #f8faf2; /* opaque : masque le rouge tant qu'on n'a pas glissé */
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border: none;
+  background: var(--nuage); /* opaque : masque le rouge tant qu'on n'a pas glissé */
   border-radius: 0;
-  box-shadow: inset 0 1px 0 var(--specular);
+  box-shadow: none;
   animation: none; /* l'entrée est portée par .swipe-row */
   touch-action: pan-y; /* swipe horizontal capté, scroll vertical natif */
-  transition: transform 0.32s var(--spring);
+  transition: transform 0.32s var(--spring), background 0.25s var(--ease);
   will-change: transform;
   -webkit-user-select: none; /* glisser ne sélectionne pas le texte */
   user-select: none;
+}
+.swipe-fg.item.bought {
+  background: var(--nuage-2);
 }
 .swipe-fg.item:active {
   transform: none; /* pas de scale : il entrerait en conflit avec le translateX */
@@ -700,7 +792,7 @@ h2 {
 .hist-list {
   list-style: none;
   margin: 0;
-  padding: 14px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -708,14 +800,11 @@ h2 {
 .hist-item {
   display: flex;
   align-items: center;
-  gap: 9px;
-  background: var(--glass);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  border: 1px solid var(--hairline);
+  gap: var(--space-3);
+  background: var(--nuage);
   border-radius: var(--radius-card);
-  padding: 12px 14px;
-  box-shadow: 0 6px 16px rgba(40, 60, 30, 0.1);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-card);
   animation: item-in 0.42s var(--spring) both;
 }
 .hist-item .avatar {
@@ -745,47 +834,68 @@ h2 {
   width: 76px;
   height: 76px;
   border-radius: 26px;
-  background: var(--glass-2);
-  border: 1px solid var(--hairline);
-  color: var(--brand);
+  background: var(--nuage);
+  color: var(--prairie);
   margin-bottom: 18px;
-  box-shadow: var(--shadow-card), 0 0 30px -8px var(--brand-glow);
+  box-shadow: var(--shadow-card);
 }
 .empty-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
   color: var(--text);
   margin: 0 0 6px;
 }
 
-/* ---------- Dock bas : CTA + barre d'onglets flottante ---------- */
+/* ---------- Dock bas : prairie + barre d'ajout + onglets ---------- */
 .dock {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0; /* l'app elle-même s'arrête au-dessus du clavier */
+  bottom: 0;
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: 0 var(--space-4) calc(var(--safe-bottom) + 14px);
   pointer-events: none;
 }
 .dock > * {
   pointer-events: auto;
 }
+/* La prairie fleurie : son haut est transparent, la liste se devine derrière
+   les collines. */
+.meadow {
+  display: block;
+  width: 100%;
+  height: 62px;
+  pointer-events: none;
+}
+.meadow-back {
+  fill: var(--colline);
+}
+.meadow-front {
+  fill: var(--colline-2);
+}
+/* Socle du dock, sur le fond lin, sous la bande de prairie. */
+.dock-ground {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 8px var(--space-4) calc(var(--safe-bottom) + 14px);
+  background: var(--fond);
+}
+.dock-ground > * {
+  pointer-events: auto;
+}
 
-/* Barre d'onglets : pilule de verre avec sélecteur glissant. */
+/* Barre d'onglets : pilule crème, onglet actif en prairie. */
 .tabbar {
   position: relative;
   display: flex;
   padding: 6px;
   border-radius: var(--pill);
-  background: var(--glass-dock);
-  backdrop-filter: blur(var(--blur)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
-  border: 1px solid var(--hairline-2);
-  box-shadow: inset 0 1px 0 var(--specular), var(--shadow-pop);
+  background: var(--nuage);
+  box-shadow: var(--shadow-pop);
   touch-action: none; /* le glissé horizontal pilote le sélecteur, pas le scroll */
 }
 .tab-indicator {
@@ -795,9 +905,7 @@ h2 {
   left: 6px;
   width: calc(50% - 6px);
   border-radius: var(--pill);
-  background: var(--glass-3);
-  border: 1px solid var(--hairline-2);
-  box-shadow: inset 0 1px 0 var(--specular), 0 6px 16px rgba(0, 0, 0, 0.3);
+  background: var(--prairie);
   transition: transform 0.42s var(--spring);
 }
 .tabbar[data-active='history'] .tab-indicator {
@@ -807,47 +915,37 @@ h2 {
   position: relative;
   z-index: 1;
   flex: 1;
+  height: 46px;
   border: none;
   background: transparent;
-  color: var(--text-3);
-  padding: 10px 0;
+  color: var(--encre-2);
+  padding: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 3px;
-  font-size: 12px;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition: color 0.3s var(--ease);
 }
 .tab.active {
-  color: var(--text);
-}
-.tab-icon {
-  position: relative;
-  display: inline-flex;
-  transition: transform 0.3s var(--spring);
-}
-.tab.active .tab-icon {
-  transform: translateY(-1px) scale(1.05);
-  color: var(--brand);
+  color: var(--on-accent);
 }
 .tab-badge {
-  position: absolute;
-  top: -6px;
-  right: -11px;
-  min-width: 18px;
-  height: 18px;
+  min-width: 20px;
+  height: 20px;
   padding: 0 5px;
+  box-sizing: border-box;
   border-radius: var(--pill);
-  background: var(--danger);
-  color: #fff;
+  background: var(--soleil);
+  color: var(--on-soleil);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #fff;
   animation: badge-pop 0.3s var(--spring);
 }
 @keyframes badge-pop {
@@ -873,11 +971,10 @@ h2 {
 .onboarding::before {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: 0 0 auto;
+  height: 38%;
   z-index: 0;
-  background:
-    radial-gradient(70% 50% at 18% 0%, rgba(70, 160, 44, 0.28), transparent 62%),
-    radial-gradient(70% 55% at 100% 100%, rgba(150, 205, 100, 0.24), transparent 60%);
+  background: var(--ciel);
 }
 /* Dans le coin haut-droit de la carte de connexion (positionné par rapport à
    elle : .onboarding-card est en position: relative). */
@@ -1074,9 +1171,7 @@ h2 {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(20, 35, 14, 0.42);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  background: var(--scrim);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1095,11 +1190,8 @@ h2 {
   width: 100%;
   max-width: 480px;
   text-align: center;
-  background: var(--glass-dock);
-  backdrop-filter: blur(var(--blur)) saturate(180%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
-  border: 1px solid var(--hairline-2);
-  border-bottom: none;
+  background: var(--nuage);
+  border: none;
   border-radius: 28px 28px 0 0;
   /* « Jupe » de 80px sous le pli (padding bas + marge négative égale) : le
      ressort de slide-up dépasse translateY(0) d'~10% de la hauteur et
@@ -1107,7 +1199,7 @@ h2 {
      Le contenu reste à la même place (les deux 80px se compensent). */
   padding: 14px 22px calc(22px + var(--safe-bottom) + 80px);
   margin-bottom: -80px;
-  box-shadow: inset 0 1px 0 var(--specular), 0 -10px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-sheet);
   animation: slide-up 0.36s var(--spring);
 }
 @keyframes slide-up {
@@ -1167,10 +1259,11 @@ h2 {
   top: 6px;
   left: 50%;
   transform: translateX(-50%);
-  width: 40px;
-  height: 5px;
+  width: 44px;
+  height: 4px;
   border-radius: var(--pill);
-  background: var(--hairline-2);
+  background: var(--encre);
+  opacity: 0.3;
 }
 .modal-emoji {
   display: inline-flex;
@@ -1341,8 +1434,40 @@ button.settings-row:active {
   padding: 0 2px;
 }
 .sheet-head h2 {
-  font-size: var(--fs-xl);
+  font-size: var(--fs-2xl);
   margin-bottom: 7px;
+}
+/* Titre + action (bouton Fermer) sur une même ligne. */
+.sheet-head.with-action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.sheet-head.with-action h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.modal .sheet-sub {
+  max-width: none;
+  margin: 4px 2px 0;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+.btn-pill {
+  flex: none;
+  border: none;
+  background: var(--encre);
+  color: var(--fond);
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: var(--pill);
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: transform 0.18s var(--spring);
+}
+.btn-pill:active {
+  transform: scale(0.95);
 }
 .sheet-head p {
   margin: 0;
@@ -1368,68 +1493,59 @@ button.settings-row:active {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 .member-stat {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px 10px 10px;
-  border-radius: 16px;
-  background: var(--glass);
-  border: 1px solid var(--hairline);
-  box-shadow: var(--shadow-card);
+  gap: var(--space-3);
+  padding: 13px 16px;
+  border-radius: 20px;
+  background: var(--nuage-2);
 }
-/* Le plus actif : léger liseré vert et fond teinté, sans surcharge. */
-.member-stat.is-leader {
-  background: linear-gradient(120deg, rgba(70, 160, 44, 0.14), rgba(70, 160, 44, 0.05));
-  border-color: rgba(70, 160, 44, 0.34);
+.ms-rank {
+  flex: none;
+  width: 18px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--encre-2);
 }
-.ms-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
+.member-stat.is-leader .ms-rank {
+  color: var(--prairie);
+}
+@media (prefers-color-scheme: dark) {
+  .member-stat.is-leader .ms-rank {
+    color: var(--soleil);
+  }
 }
 .ms-name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--fs-md);
   font-weight: 700;
-  color: var(--text);
-}
-.ms-bar {
-  height: 5px;
-  border-radius: var(--pill);
-  background: rgba(33, 49, 26, 0.08);
-  overflow: hidden;
-}
-.ms-bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--pill);
-  background: linear-gradient(90deg, var(--brand-2), var(--brand));
-  transition: width 0.5s var(--ease);
+  color: var(--encre);
 }
 .ms-count {
   flex: none;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  line-height: 1.05;
 }
 .ms-count strong {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--brand-text);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--encre);
 }
 .ms-unit {
-  margin-top: 1px;
+  margin-top: 2px;
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-3);
+  font-weight: 500;
+  color: var(--encre-2);
 }
 
 /* ---------- Écrans pleins (chargement / erreur) ---------- */
@@ -1445,8 +1561,9 @@ button.settings-row:active {
 .screen-center::before {
   content: '';
   position: absolute;
-  inset: 0;
-  background: radial-gradient(70% 50% at 50% 0%, rgba(70, 160, 44, 0.2), transparent 64%);
+  inset: 0 0 auto;
+  height: 38%;
+  background: var(--ciel);
 }
 .spinner {
   position: relative;

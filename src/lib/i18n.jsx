@@ -57,6 +57,10 @@ const fr = {
   err_leave: 'Impossible de quitter le foyer.',
   stats_title: 'Classement',
   stats_items_unit: ({ n }) => (n > 1 ? 'articles' : 'article'),
+  stats_sub: 'Nombre d’articles achetés depuis le début.',
+  leaving_soon: 'En partance',
+  just_now: 'à l’instant',
+  ago_min: ({ n }) => `il y a ${n} min`,
   stats_empty: 'Personne n’a encore rien acheté.',
 
   // Liste
@@ -144,6 +148,10 @@ const en = {
   err_leave: 'Couldn’t leave the home.',
   stats_title: 'Leaderboard',
   stats_items_unit: ({ n }) => (n > 1 ? 'items' : 'item'),
+  stats_sub: 'Items bought since the start.',
+  leaving_soon: 'Leaving soon',
+  just_now: 'just now',
+  ago_min: ({ n }) => `${n} min ago`,
   stats_empty: 'No one has bought anything yet.',
 
   add_item_ph: 'Add an item…',

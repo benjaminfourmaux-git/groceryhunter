@@ -25,7 +25,7 @@ export default function History({ items, memberById }) {
     return (
       <div className="empty">
         <span className="empty-icon">
-          <Icon name="history" size={30} />
+          <Icon name="clock" size={30} />
         </span>
         <p className="empty-title">{t('hist_empty_title')}</p>
         <p className="muted">{t('hist_empty_body')}</p>
@@ -39,7 +39,7 @@ export default function History({ items, memberById }) {
         const buyer = memberById[it.bought_by]
         return (
           <li key={it.id} className="hist-item">
-            {buyer && <Avatar name={buyer.display_name} color={buyer.color} size={24} />}
+            {buyer && <Avatar name={buyer.display_name} color={buyer.color} size={32} />}
             <span className="item-name">{it.name}</span>
             {it.quantity && <span className="qty-badge">{it.quantity}</span>}
             <span className="hist-when muted small">{formatWhen(it.bought_at, t, locale)}</span>

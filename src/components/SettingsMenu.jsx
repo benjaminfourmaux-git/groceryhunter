@@ -65,10 +65,10 @@ export default function SettingsMenu({ open, onClose, onClosed, anchorRef, pushS
       morph.style.width = b.width + 'px'
       morph.style.height = b.height + 'px'
       morph.style.borderRadius = radius + 'px'
-      // Clone EXACT du bouton ⋯ de l'en-tête : translucide léger, SANS flou ni
+      // Clone EXACT du bouton réglages de l'en-tête : transparent, SANS flou ni
       // ombre. C'est ce qui rend l'échange final (morph → vrai bouton) invisible.
-      morph.style.backgroundColor = 'rgba(255, 255, 255, 0.18)'
-      morph.style.borderColor = 'rgba(255, 255, 255, 0.26)'
+      morph.style.backgroundColor = 'transparent'
+      morph.style.borderColor = 'transparent'
       morph.style.boxShadow = 'none'
       morph.style.backdropFilter = 'blur(0px) saturate(100%)'
       morph.style.webkitBackdropFilter = 'blur(0px) saturate(100%)'
@@ -173,7 +173,7 @@ export default function SettingsMenu({ open, onClose, onClosed, anchorRef, pushS
         aria-label={t('settings_title')}
       >
         <span className="morph-icon" aria-hidden="true">
-          <Icon name="more" size={20} />
+          <Icon name="sliders" size={21} />
         </span>
         <div ref={menuRef} className="morph-menu">
           <div className="sheet-head">

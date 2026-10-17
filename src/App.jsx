@@ -118,13 +118,11 @@ export default function App() {
     let lastKb = 0
 
     const apply = (kb) => {
-      const dock = document.querySelector('.dock')
-      const tabbar = document.querySelector('.tabbar')
-      let under = 0 // distance barre d'ajout → bas de l'écran, clavier fermé
-      if (dock && tabbar) {
-        const cs = getComputedStyle(dock)
-        under = tabbar.offsetHeight + (parseFloat(cs.rowGap) || 0) + (parseFloat(cs.paddingBottom) || 0)
-      }
+      // Distance barre d'ajout → bas de l'écran, clavier fermé. Mesurée en
+      // offsets (hors transform) dans le socle du dock, posé au ras du bas.
+      const ground = document.querySelector('.dock-ground')
+      const bar = document.querySelector('.add-bar')
+      const under = ground && bar ? ground.offsetHeight - (bar.offsetTop + bar.offsetHeight) : 0
       const lift = kb > 0 ? Math.max(0, kb + GAP - under) : 0
       root.style.setProperty('--kb-lift', lift + 'px')
     }
@@ -481,7 +479,6 @@ export default function App() {
     <div className="app">
       <Header
         household={member.household}
-        members={members}
         onShowStats={handleShowStats}
         onOpenSettings={() => { setMenuMounted(true); setSettingsOpen(true) }}
         hideSettingsBtn={menuMounted}
@@ -503,32 +500,31 @@ export default function App() {
       </main>
 
       <div className="dock">
-        {view === 'list' && <AddBar onAdd={handleAdd} />}
+        <Meadow />
+        <div className="dock-ground">
+          {view === 'list' && <AddBar onAdd={handleAdd} />}
 
-        <nav className="tabbar" data-active={view} ref={tabbarRef}>
-          <span className="tab-indicator" aria-hidden="true" ref={indicatorRef} />
-          <button
-            type="button"
-            className={'tab' + (view === 'list' ? ' active' : '')}
-            onClick={() => setView('list')}
-          >
-            <span className="tab-icon">
-              <Icon name="list" size={22} />
+          <nav className="tabbar" data-active={view} ref={tabbarRef}>
+            <span className="tab-indicator" aria-hidden="true" ref={indicatorRef} />
+            <button
+              type="button"
+              className={'tab' + (view === 'list' ? ' active' : '')}
+              onClick={() => setView('list')}
+            >
+              <Icon name="list" size={19} />
+              <span>{t('tab_list')}</span>
               {toBuyCount > 0 && <span className="tab-badge">{toBuyCount}</span>}
-            </span>
-            <span>{t('tab_list')}</span>
-          </button>
-          <button
-            type="button"
-            className={'tab' + (view === 'history' ? ' active' : '')}
-            onClick={() => setView('history')}
-          >
-            <span className="tab-icon">
-              <Icon name="history" size={22} />
-            </span>
-            <span>{t('tab_history')}</span>
-          </button>
-        </nav>
+            </button>
+            <button
+              type="button"
+              className={'tab' + (view === 'history' ? ' active' : '')}
+              onClick={() => setView('history')}
+            >
+              <Icon name="clock" size={19} />
+              <span>{t('tab_history')}</span>
+            </button>
+          </nav>
+        </div>
       </div>
 
       {leaving && (
@@ -557,16 +553,15 @@ export default function App() {
         <BottomSheet className="sheet" onClose={() => setStatsOpen(false)}>
           {(close) => (
             <>
-              <div className="sheet-head">
+              <div className="sheet-head with-action">
                 <h2>{t('stats_title')}</h2>
-              </div>
-              <div className="stats-scroll">
-                <StatsPanel members={members} />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="btn-ghost" onClick={close}>
+                <button type="button" className="btn-pill" onClick={close}>
                   {t('close')}
                 </button>
+              </div>
+              <p className="sheet-sub muted">{t('stats_sub')}</p>
+              <div className="stats-scroll">
+                <StatsPanel members={members} />
               </div>
             </>
           )}
@@ -597,6 +592,23 @@ function humanizeStartupError(err) {
     return 'schema'
   }
   return msg || 'unknown'
+}
+
+// Prairie fleurie peinte au-dessus du dock (décor « Grand ciel »).
+function Meadow() {
+  return (
+    <svg className="meadow" viewBox="0 0 390 62" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <path className="meadow-back" d="M0 26C70 10 148 36 228 22c54-9 110-12 162-4v48H0V26Z" />
+      <path className="meadow-front" d="M0 42C92 30 170 52 260 40c48-6 92-6 130 0v22H0V42Z" />
+      <circle cx="48" cy="34" r="3.4" fill="#D6513C" />
+      <circle cx="96" cy="40" r="2.6" fill="#E8B23C" />
+      <circle cx="150" cy="44" r="3" fill="#FDFBF5" />
+      <circle cx="206" cy="33" r="3.4" fill="#D6513C" />
+      <circle cx="262" cy="39" r="2.6" fill="#E8B23C" />
+      <circle cx="318" cy="31" r="3" fill="#FDFBF5" />
+      <circle cx="358" cy="38" r="3.4" fill="#D6513C" />
+    </svg>
+  )
 }
 
 function ErrorScreen({ which }) {

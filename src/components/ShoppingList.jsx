@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Icon from './Icon'
 import Avatar from './Avatar'
 import { useLang } from '../lib/i18n'
@@ -9,7 +9,7 @@ const COMMIT_RATIO = 0.4 // fraction de la largeur de ligne à atteindre pour su
 const FLICK_VELOCITY = 1.2 // px/ms vers la gauche : un geste vif supprime même court
 const FLICK_MIN_DX = 24 // mais il faut un déplacement minimal, pour éviter le faux geste
 
-const RING_R = 16
+const RING_R = 15 // anneau de 32 px autour du rond de 24 px (maquette « Grand ciel »)
 const RING_CIRC = 2 * Math.PI * RING_R // circonférence de l'anneau de compte à rebours
 
 // Case à cocher « acheté » (à droite). Vide = à acheter ; cochée = rouge + anneau
@@ -21,6 +21,15 @@ const TAP_SLOP = 6 // px tolérés avant d'annuler l'appui
 function BuyCheck({ bought, fraction, onToggle, t }) {
   const press = useRef(null)
   const [pressed, setPressed] = useState(false)
+
+  // Un pétale tombe quand l'article passe à « acheté » (ici ou chez un autre
+  // membre). Rien au premier affichage d'un article déjà coché.
+  const [petal, setPetal] = useState(0)
+  const wasBought = useRef(bought)
+  useEffect(() => {
+    if (bought && !wasBought.current) setPetal((n) => n + 1)
+    wasBought.current = bought
+  }, [bought])
 
   function onPointerDown(e) {
     press.current = { x: e.clientX, y: e.clientY, pid: e.pointerId }
@@ -57,12 +66,12 @@ function BuyCheck({ bought, fraction, onToggle, t }) {
       aria-label={bought ? t('aria_uncheck') : t('aria_check')}
     >
       {bought && (
-        <svg className="buy-ring" viewBox="0 0 40 40" aria-hidden="true">
-          <circle className="buy-ring-track" cx="20" cy="20" r={RING_R} />
+        <svg className="buy-ring" viewBox="0 0 32 32" aria-hidden="true">
+          <circle className="buy-ring-track" cx="16" cy="16" r={RING_R} />
           <circle
             className="buy-ring-fill"
-            cx="20"
-            cy="20"
+            cx="16"
+            cy="16"
             r={RING_R}
             strokeDasharray={RING_CIRC}
             strokeDashoffset={RING_CIRC * (1 - fraction)}
@@ -70,10 +79,20 @@ function BuyCheck({ bought, fraction, onToggle, t }) {
         </svg>
       )}
       <span className="buy-dot" aria-hidden="true">
-        {bought && <Icon name="check" size={13} strokeWidth={3} />}
+        {bought && <Icon name="check" size={14} strokeWidth={3} />}
       </span>
+      {petal > 0 && (
+        <span key={petal} className="petal" aria-hidden="true" onAnimationEnd={() => setPetal(0)} />
+      )}
     </button>
   )
+}
+
+// « il y a 12 min » : un article coché reste au plus T1 (1 h) dans la liste,
+// les minutes suffisent.
+function agoLabel(ms, t) {
+  const n = Math.floor(ms / 60000)
+  return n < 1 ? t('just_now') : t('ago_min', { n })
 }
 
 // Chaque ligne gère son propre swipe (suppression). Glisser au-delà du seuil =
@@ -171,7 +190,7 @@ function SwipeRow({ it, now, adder, onToggleBought, onDelete, t }) {
   }
 
   return (
-    <li ref={rowRef} data-flip-id={it.id} className="swipe-row">
+    <li ref={rowRef} data-flip-id={it.id} className={'swipe-row' + (bought ? ' bought' : '')}>
       <div className="swipe-bg">
         <button
           type="button"
@@ -194,10 +213,11 @@ function SwipeRow({ it, now, adder, onToggleBought, onDelete, t }) {
         onPointerCancel={up}
       >
         <div className="item-main">
-          {adder && <Avatar name={adder.display_name} color={adder.color} size={24} />}
+          {adder && <Avatar name={adder.display_name} color={adder.color} size={32} />}
           <span className="item-name">{it.name}</span>
         </div>
         {it.quantity && <span className="qty-badge">{it.quantity}</span>}
+        {bought && <span className="item-when">{agoLabel(now - boughtMs, t)}</span>}
         <BuyCheck
           bought={bought}
           fraction={fraction}
@@ -268,17 +288,26 @@ export default function ShoppingList({ items, now, memberById, onToggleBought, o
   return (
     <div className="list-view">
       <ul className="items" ref={listRef}>
-        {items.map((it) => (
-          <SwipeRow
-            key={it.id}
-            it={it}
-            now={now}
-            adder={memberById[it.added_by]}
-            onToggleBought={onToggleBought}
-            onDelete={onDelete}
-            t={t}
-          />
-        ))}
+        {items.map((it, i) => {
+          // Séparateur « En partance » avant le premier article coché.
+          const firstBought = it.bought_at && (i === 0 || !items[i - 1].bought_at)
+          return [
+            firstBought && (
+              <li key="sep" className="list-sep" aria-hidden="true">
+                <span>{t('leaving_soon')}</span>
+              </li>
+            ),
+            <SwipeRow
+              key={it.id}
+              it={it}
+              now={now}
+              adder={memberById[it.added_by]}
+              onToggleBought={onToggleBought}
+              onDelete={onDelete}
+              t={t}
+            />,
+          ]
+        })}
       </ul>
     </div>
   )

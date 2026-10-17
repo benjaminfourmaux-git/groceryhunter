@@ -1,6 +1,6 @@
-import { initials } from '../lib/colors'
+import { avatarTone, initials } from '../lib/colors'
 
-export default function Avatar({ name, color = '#0E8C7F', size = 36, title }) {
+export default function Avatar({ name, color, size = 32, title }) {
   return (
     <span
       className="avatar"
@@ -8,7 +8,7 @@ export default function Avatar({ name, color = '#0E8C7F', size = 36, title }) {
       style={{
         width: size,
         height: size,
-        background: color,
+        background: `var(--av-${avatarTone(color)})`,
         fontSize: Math.round(size * 0.4),
       }}
     >
