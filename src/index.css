@@ -1644,6 +1644,21 @@ button.settings-row:active {
   background: linear-gradient(90deg, var(--brand-2), var(--brand));
   transition: width 0.5s var(--ease);
 }
+/* Repère secondaire, volontairement effacé : total d'articles achetés. */
+.ms-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 1px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.ms-meta svg {
+  flex: none;
+  color: var(--text-3);
+}
 .ms-count {
   flex: none;
   display: flex;

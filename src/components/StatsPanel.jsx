@@ -1,19 +1,22 @@
 import Avatar from './Avatar'
+import Icon from './Icon'
 import { useLang } from '../lib/i18n'
 
 // Classement épuré : chaque membre du foyer, avec le nombre de fois qu'il a fait
 // les courses. Tous les membres apparaissent (0 si jamais sorti). Trié du plus
-// actif au moins actif ; une barre fine matérialise l'écart relatif.
+// actif au moins actif ; une barre fine matérialise l'écart relatif. Sous la
+// barre, un repère discret rappelle le total d'articles achetés (depuis toujours).
 export default function StatsPanel({ members, stats }) {
   const { t } = useLang()
 
-  const tripsByName = Object.fromEntries((stats ?? []).map((s) => [s.name, s.trips]))
+  const byName = Object.fromEntries((stats ?? []).map((s) => [s.name, s]))
   const entries = (members ?? [])
     .map((m) => ({
       id: m.id,
       name: m.display_name,
       color: m.color,
-      trips: tripsByName[m.display_name] ?? 0,
+      trips: byName[m.display_name]?.trips ?? 0,
+      items: byName[m.display_name]?.items ?? 0,
     }))
     .sort((a, b) => b.trips - a.trips || a.name.localeCompare(b.name))
 
@@ -33,6 +36,10 @@ export default function StatsPanel({ members, stats }) {
             <span className="ms-name">{e.name}</span>
             <span className="ms-bar" aria-hidden="true">
               <span className="ms-bar-fill" style={{ width: (e.trips / max) * 100 + '%' }} />
+            </span>
+            <span className="ms-meta">
+              <Icon name="cart" size={13} />
+              {t('items_count', { n: e.items })}
             </span>
           </div>
           <span className="ms-count">
