@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import Icon from './Icon'
 import Avatar from './Avatar'
 import { useLang } from '../lib/i18n'
@@ -14,12 +14,46 @@ const RING_CIRC = 2 * Math.PI * RING_R // circonférence de l'anneau de compte �
 
 // Case à cocher « acheté » (à droite). Vide = à acheter ; cochée = rouge + anneau
 // qui se vide sur la durée T1 (le temps restant avant de filer dans l'historique).
+// Tap uniquement : dès que le doigt bouge, l'appui est annulé (le rond se
+// relâche et rien n'est coché). Glisser depuis la case ne fait rien.
+const TAP_SLOP = 6 // px tolérés avant d'annuler l'appui
+
 function BuyCheck({ bought, fraction, onToggle, t }) {
+  const press = useRef(null)
+  const [pressed, setPressed] = useState(false)
+
+  function onPointerDown(e) {
+    press.current = { x: e.clientX, y: e.clientY, pid: e.pointerId }
+    setPressed(true)
+  }
+  function onPointerMove(e) {
+    const p = press.current
+    if (!p || e.pointerId !== p.pid) return
+    if (Math.abs(e.clientX - p.x) > TAP_SLOP || Math.abs(e.clientY - p.y) > TAP_SLOP) {
+      press.current = null
+      setPressed(false)
+    }
+  }
+  function release() {
+    setPressed(false)
+  }
+  function onClick(e) {
+    // e.detail === 0 : activation au clavier (Entrée / Espace), toujours valide.
+    const valid = e.detail === 0 || press.current
+    press.current = null
+    if (valid) onToggle()
+  }
+
   return (
     <button
       type="button"
-      className={'buy-check' + (bought ? ' bought' : '')}
-      onClick={onToggle}
+      className={'buy-check' + (bought ? ' bought' : '') + (pressed ? ' pressed' : '')}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={release}
+      onPointerCancel={() => { press.current = null; release() }}
+      onPointerLeave={() => { press.current = null; release() }}
+      onClick={onClick}
       aria-label={bought ? t('aria_uncheck') : t('aria_check')}
     >
       {bought && (
@@ -56,7 +90,7 @@ function SwipeRow({ it, now, adder, onToggleBought, onDelete, t }) {
 
   function down(e) {
     if (removing.current) return
-    if (e.target.closest('.buy-check')) return // tap sur la case : pas de swipe
+    if (e.target.closest('.buy-check')) return // la case ne lance jamais de glissé
     drag.current = {
       startX: e.clientX,
       startY: e.clientY,

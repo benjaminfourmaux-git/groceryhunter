@@ -19,7 +19,15 @@ export function initPress() {
     if (e.pointerType === 'mouse' && e.button !== 0) return
     const btn = e.target.closest('button')
     // Onglets et boutons de l'en-tête exclus : ils gardent un press simple.
-    if (!btn || btn.disabled || btn.closest('.tabbar') || btn.closest('.appbar')) return
+    // Case « acheté » exclue aussi : elle ne doit pas suivre le doigt.
+    if (
+      !btn ||
+      btn.disabled ||
+      btn.closest('.tabbar') ||
+      btn.closest('.appbar') ||
+      btn.classList.contains('buy-check')
+    )
+      return
 
     el = btn
     pid = e.pointerId

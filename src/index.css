@@ -609,6 +609,19 @@ h2 {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  /* Pas de « saisie » de la case : ni glisser-déposer natif, ni sélection,
+     ni menu d'appui long iOS. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.buy-check,
+.buy-check * {
+  -webkit-user-drag: none;
+}
+.buy-check svg {
+  pointer-events: none;
 }
 .buy-dot {
   position: relative;
@@ -624,7 +637,7 @@ h2 {
   justify-content: center;
   transition: background 0.22s var(--spring), border-color 0.22s var(--ease), transform 0.18s var(--spring);
 }
-.buy-check:active .buy-dot {
+.buy-check.pressed .buy-dot {
   transform: scale(0.85);
 }
 .buy-check.bought .buy-dot {
@@ -716,6 +729,8 @@ h2 {
   touch-action: pan-y; /* swipe horizontal capté, scroll vertical natif */
   transition: transform 0.32s var(--spring);
   will-change: transform;
+  -webkit-user-select: none; /* glisser ne sélectionne pas le texte */
+  user-select: none;
 }
 .swipe-fg.item:active {
   transform: none; /* pas de scale : il entrerait en conflit avec le translateX */
