@@ -288,8 +288,11 @@ export default function ShoppingList({ items, now, memberById, onToggleBought, o
   return (
     <div className="list-view">
       <ul className="items" ref={listRef}>
-        {items.map((it, i) => {
+        {items.flatMap((it, i) => {
           // Séparateur « En partance » avant le premier article coché.
+          // flatMap (liste PLATE de frères à clé) : un tableau par article
+          // ferait réconcilier React par position, et chaque coche recréerait
+          // toutes les lignes (animation d'entrée rejouée, pétale perdu).
           const firstBought = it.bought_at && (i === 0 || !items[i - 1].bought_at)
           return [
             firstBought && (

@@ -573,8 +573,6 @@ export default function App() {
         onClose={() => setSettingsOpen(false)}
         onClosed={() => setMenuMounted(false)}
         anchorRef={settingsBtnRef}
-        pushState={pushState}
-        onEnablePush={handleEnablePush}
         onLeave={() => setLeaving(true)}
       />
 

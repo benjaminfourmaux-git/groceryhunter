@@ -42,6 +42,11 @@ const fr = {
   // Header / Réglages
   settings_title: 'Réglages',
   settings_notifications: 'Notifications',
+  settings_theme: 'Thème',
+  theme_auto: 'Auto',
+  theme_light: 'Jour',
+  theme_dark: 'Crépuscule',
+  theme_change: 'Changer le thème',
   settings_language: 'Langue',
   bell_on: 'Notifications activées',
   bell_blocked: 'Notifications bloquées',
@@ -133,6 +138,11 @@ const en = {
 
   settings_title: 'Settings',
   settings_notifications: 'Notifications',
+  settings_theme: 'Theme',
+  theme_auto: 'Auto',
+  theme_light: 'Day',
+  theme_dark: 'Dusk',
+  theme_change: 'Change theme',
   settings_language: 'Language',
   bell_on: 'Notifications on',
   bell_blocked: 'Notifications blocked',

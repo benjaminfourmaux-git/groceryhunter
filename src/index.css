@@ -96,11 +96,20 @@
   --font: 'Zen Maru Gothic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
     sans-serif;
   --font-display: 'Klee One', 'Zen Maru Gothic', Georgia, serif;
+
+  /* Bascules jour / crépuscule (redéfinies plus bas). */
+  --sky-day: inline;
+  --sky-night: none;
+  --chip-bg: var(--nuage);
+  --chip-shadow: 0 2px 6px rgba(32, 56, 62, 0.12);
+  --leader: var(--prairie);
 }
 
-/* Crépuscule : mêmes rôles, couleurs du soir. */
+/* Crépuscule : mêmes rôles, couleurs du soir. Actif si le téléphone est en
+   mode sombre (sauf thème « Jour » forcé dans l'app), ou si l'app force le
+   thème « Crépuscule » (data-theme, cf. lib/theme.js). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --fond: #1b2a44;
     --nuage: #243653;
     --nuage-2: #2c4162;
@@ -133,7 +142,63 @@
     --shadow-glow: 0 8px 18px rgba(127, 176, 122, 0.3);
     --shadow-sheet: 0 -18px 46px rgba(8, 14, 26, 0.5);
     --brand-glow: rgba(127, 176, 122, 0.3);
+    color-scheme: dark;
+    /* Bascules du décor et de quelques composants (sans media query). */
+    --sky-day: none;
+    --sky-night: inline;
+    --chip-bg: rgba(238, 230, 214, 0.16);
+    --chip-shadow: none;
+    --leader: var(--soleil);
   }
+}
+:root[data-theme='dark'] {
+  --fond: #1b2a44;
+  --nuage: #243653;
+  --nuage-2: #2c4162;
+  --encre: #eee6d6;
+  --encre-2: #a9b4c4;
+  --prairie: #7fb07a;
+  --coquelicot: #e8806b;
+  --soleil: #f0c06a; /* la lune */
+  --on-accent: #16233a;
+  --on-soleil: #16233a;
+  --on-avatar: #16233a;
+
+  --ciel: #23375c;
+  --nuage-ciel: #2e4670;
+  --colline: #3f6b47;
+  --colline-2: #2e5236;
+
+  --av-prairie: #7fb07a;
+  --av-coquelicot: #e8806b;
+  --av-lac: #8fb8d8;
+  --av-lavande: #b9a3d6;
+
+  --hairline: rgba(238, 230, 214, 0.12);
+  --hairline-2: rgba(238, 230, 214, 0.2);
+  --scrim: rgba(10, 18, 32, 0.6);
+
+  --shadow-card: 0 6px 16px rgba(8, 14, 26, 0.3);
+  --shadow-field: 0 4px 12px rgba(8, 14, 26, 0.3);
+  --shadow-pop: 0 6px 18px rgba(8, 14, 26, 0.4);
+  --shadow-glow: 0 8px 18px rgba(127, 176, 122, 0.3);
+  --shadow-sheet: 0 -18px 46px rgba(8, 14, 26, 0.5);
+  --brand-glow: rgba(127, 176, 122, 0.3);
+  color-scheme: dark;
+  /* Bascules du décor et de quelques composants (sans media query). */
+  --sky-day: none;
+  --sky-night: inline;
+  --chip-bg: rgba(238, 230, 214, 0.16);
+  --chip-shadow: none;
+  --leader: var(--soleil);
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+/* Pendant une bascule de thème (cf. lib/theme.js). */
+.theme-switching,
+.theme-switching * {
+  transition: none !important;
 }
 
 * {
@@ -257,16 +322,11 @@ h2 {
 .sky-birds {
   stroke: #fdfbf5;
 }
-.sky-night {
-  display: none;
+.sky-day {
+  display: var(--sky-day);
 }
-@media (prefers-color-scheme: dark) {
-  .sky-day {
-    display: none;
-  }
-  .sky-night {
-    display: inline;
-  }
+.sky-night {
+  display: var(--sky-night);
 }
 /* Les nuages du fond traversent le ciel très lentement (120 s). */
 .sky-drift {
@@ -313,25 +373,19 @@ h2 {
   display: inline-flex;
   align-items: center;
   border: none;
-  background: var(--nuage);
+  background: var(--chip-bg);
   color: var(--encre);
   padding: 6px 12px;
   border-radius: var(--pill);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.12em;
-  box-shadow: 0 2px 6px rgba(32, 56, 62, 0.12);
+  box-shadow: var(--chip-shadow);
   cursor: pointer;
   transition: transform 0.18s var(--spring), background 0.2s var(--ease);
 }
 .code-chip:active {
   transform: scale(0.95);
-}
-@media (prefers-color-scheme: dark) {
-  .code-chip {
-    background: rgba(238, 230, 214, 0.16);
-    box-shadow: none;
-  }
 }
 
 /* ---------- Avatars ---------- */
@@ -1511,12 +1565,7 @@ button.settings-row:active {
   color: var(--encre-2);
 }
 .member-stat.is-leader .ms-rank {
-  color: var(--prairie);
-}
-@media (prefers-color-scheme: dark) {
-  .member-stat.is-leader .ms-rank {
-    color: var(--soleil);
-  }
+  color: var(--leader);
 }
 .ms-name {
   flex: 1;

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Icon from './Icon'
 import LangToggle from './LangToggle'
 import { useLang } from '../lib/i18n'
+import { cycleTheme, useThemePref } from '../lib/theme'
 
 // Menu Réglages « morph » : le rond ⋯ de l'en-tête se métamorphose en un panneau
 // liquid-glass rectangulaire (et inversement au clic extérieur). On anime la
@@ -33,8 +34,9 @@ function geomTransition(reduce) {
   )
 }
 
-export default function SettingsMenu({ open, onClose, onClosed, anchorRef, pushState, onEnablePush, onLeave }) {
+export default function SettingsMenu({ open, onClose, onClosed, anchorRef, onLeave }) {
   const { t } = useLang()
+  const themePref = useThemePref()
   const [mounted, setMounted] = useState(false)
   const [expanded, setExpanded] = useState(false) // pilote la classe .is-open (fondu du contenu)
   const morphRef = useRef(null)
@@ -156,11 +158,6 @@ export default function SettingsMenu({ open, onClose, onClosed, anchorRef, pushS
 
   if (!mounted) return null
 
-  const bellLabel =
-    pushState === 'granted' ? t('bell_on')
-    : pushState === 'denied' ? t('bell_blocked')
-    : t('bell_enable')
-
   return (
     <>
       {/* Capte le clic extérieur, sans voile de modale (on garde l'effet morph). */}
@@ -180,18 +177,20 @@ export default function SettingsMenu({ open, onClose, onClosed, anchorRef, pushS
             <h2>{t('settings_title')}</h2>
           </div>
           <div className="settings-list">
+            {/* Le bouton cloche change le thème (Auto → Jour → Crépuscule). Son
+                apparence sera revue plus tard ; les notifications sont en pause. */}
             <div className="settings-row">
-              <span className="settings-label">{t('settings_notifications')}</span>
+              <span className="settings-label">
+                {t('settings_theme')} · {t('theme_' + themePref)}
+              </span>
               <button
                 type="button"
-                className={'icon-btn bell ' + pushState}
-                onClick={onEnablePush}
-                disabled={pushState === 'granted' || pushState === 'denied'}
-                aria-label={bellLabel}
-                title={bellLabel}
+                className="icon-btn bell"
+                onClick={cycleTheme}
+                aria-label={t('theme_change')}
+                title={t('theme_change')}
               >
                 <Icon name="bell" size={20} />
-                {pushState === 'granted' && <span className="bell-dot" />}
               </button>
             </div>
             <div className="settings-row">
