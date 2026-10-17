@@ -224,16 +224,14 @@ Ce fichier range les clés de connexion. On va le créer dans VS Code.
 
 5. Enregistre : **Ctrl + S** (Mac : **Cmd + S**).
 
-> 🔑 **Clés VAPID** (pour les notifications). Une paire a déjà été générée pour toi :
-> - Clé **publique** (à mettre dans `.env`, ligne `VITE_VAPID_PUBLIC_KEY`) :
->   `BBIxHY3ozWOTx6wi8fY5G_v-aeBDclQPq-4igAo2-3F4UfI185SRNfGA5dxIII6CplJWc49tyw8tenWH-d3a-SE`
-> - Clé **privée** (servira à l'envoi des notifications, en pause pour l'instant — à garder secrète) :
->   `eVbN6mmaBMQ7OuJZlQWEcLU5BXw29j9Ea9oGkBmZZ8Q`
+> 🔑 **Clés VAPID** (pour les notifications). Génère ta propre paire dans le Terminal :
+>   `npx web-push generate-vapid-keys`
+> - Colle la clé **publique** dans `.env`, ligne `VITE_VAPID_PUBLIC_KEY`.
+> - Garde la clé **privée** pour toi (elle servira à l'envoi des notifications, en pause
+>   pour l'instant) : ne l'écris **jamais** dans un fichier suivi par git, ni dans ce README.
 >
 > Si tu n'as pas encore les notifications en tête, tu peux mettre n'importe quoi sur cette ligne
 > pour l'instant et y revenir : la liste fonctionnera quand même.
-> ⚠️ Ces clés sont **personnelles**. Si un jour tu publies ce code en public (sur GitHub par
-> exemple), régénère-les et ne partage jamais la clé privée.
 
 ✅ **Vérification** : le fichier `.env` contient trois lignes commençant par `VITE_`, avec tes
 vraies valeurs après le `=`.
