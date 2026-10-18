@@ -208,7 +208,15 @@ export default function Sandbox() {
       assert('Restauration avant la fin : même ligne', row(2) === restored && !row(2).hasAttribute('data-exiting') && row(2).style.height === '')
       const fg = row(3).querySelector('.swipe-fg')
       pointer(fg, 'pointerdown', 320, 200); pointer(fg, 'pointermove', 30, 200); flushSync(() => pointer(fg, 'pointerup', 30, 200))
-      assert('Swipe validé : mutation immédiate et sortie simultanée', deletes.current === 1 && row(3)?.hasAttribute('data-exiting'))
+      // La bande devient entièrement rouge puis se replie aussitôt, lentement,
+      // dans la continuité du geste ; l'article est supprimé une fois replié.
+      const swiped = row(3)
+      const swipedHeight = swiped.offsetHeight
+      assert('Swipe validé : rien de supprimé pendant le glissé', deletes.current === 0 && !swiped.hasAttribute('data-exiting'))
+      await sleep(240)
+      assert('Swipe validé : bande entièrement rouge, repli sans pause', deletes.current === 0 && Math.abs(new DOMMatrix(getComputedStyle(fg).transform).m41) >= fg.offsetWidth - 1 && swiped.offsetHeight < swipedHeight)
+      await sleep(400)
+      assert('Swipe validé : suppression une fois replié', deletes.current === 1)
       await sleep(320)
       assert('Suppression terminée, espace retiré', !row(3))
       flushSync(() => setItems([{ ...seed[0], bought_at: new Date(Date.now() - T1_MS + 350).toISOString(), bought_by: 'alice' }, seed[1]]))

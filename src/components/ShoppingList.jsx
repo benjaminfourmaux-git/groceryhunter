@@ -10,6 +10,7 @@ import usePresenceItems from '../lib/usePresenceItems'
 const COMMIT_RATIO = 0.4 // fraction de la largeur de ligne à atteindre pour supprimer
 const FLICK_VELOCITY = 1.2 // px/ms vers la gauche : un geste vif supprime même court
 const FLICK_MIN_DX = 24 // mais il faut un déplacement minimal, pour éviter le faux geste
+const SWIPE_COLLAPSE = { height: 400, opacity: 300 } // repli lent après un glissé de suppression
 
 const RING_R = 15 // anneau de 32 px autour du rond de 24 px (maquette « Grand ciel »)
 const RING_CIRC = 2 * Math.PI * RING_R // circonférence de l'anneau de compte à rebours
@@ -232,15 +233,32 @@ function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, e
 
     if (commit) {
       removing.current = true
-      const dur = reducedMotion() ? 0 : 180
-      fg.style.transition = `transform ${dur}ms cubic-bezier(0.22, 1, 0.36, 1)`
+      // L'article finit de glisser à la vitesse du geste : toute la bande
+      // devient rouge, PUIS l'article est supprimé et la ligne se replie.
+      const speed = Math.max(Math.abs(d.vx), 0.3)
+      const dur = reducedMotion() ? 0 : Math.min(360, Math.max(120, (d.width + d.x) / speed))
+      fg.style.transition = `transform ${Math.round(dur)}ms cubic-bezier(0.22, 1, 0.36, 1)`
       fg.style.transform = `translateX(-${d.width}px)`
-      // La mutation et le repli se font ensemble, au lieu d'attendre deux
-      // animations successives avant de commencer la requête.
-      Promise.resolve(onDelete(it.id)).catch(() => {
-        removing.current = false
-        resetRow(row, fg)
-      })
+      let called = false
+      const remove = (e) => {
+        if (e && (e.target !== fg || e.propertyName !== 'transform')) return
+        if (called) return
+        called = true
+        fg.removeEventListener('transitionend', remove)
+        // Sans pause : la bande rouge se replie aussitôt, lentement, dans la
+        // continuité du geste ; l'article est supprimé une fois replié.
+        const del = () => Promise.resolve(onDelete(it.id)).catch(() => {
+          removing.current = false
+          resetRow(row, fg)
+        })
+        if (dur === 0) del()
+        else collapseRow(row, del, SWIPE_COLLAPSE)
+      }
+      if (dur === 0) remove()
+      else {
+        fg.addEventListener('transitionend', remove)
+        setTimeout(remove, dur + 80) // filet si transitionend ne tire pas
+      }
     } else {
       fg.style.transform = ''
       row.removeAttribute('data-armed')

@@ -4,7 +4,11 @@ const exits = new WeakMap()
 
 // Hauteur et espace se replient ensemble ; le rendu optimiste et la requête
 // n'attendent pas la fin de l'animation. Renvoie une fonction d'arrêt.
-export function collapseRow(row, onDone = () => {}) {
+// `timing` (facultatif) : durées propres, ex. le repli plus lent qui prolonge
+// un glissé de suppression ({ height: 400, opacity: 300 }).
+export function collapseRow(row, onDone = () => {}, timing = {}) {
+  const heightMs = timing.height ?? EXIT_MS
+  const opacityMs = timing.opacity ?? 160
   exits.get(row)?.()
   if (reducedMotion()) {
     onDone()
@@ -16,7 +20,7 @@ export function collapseRow(row, onDone = () => {}) {
   row.style.height = height + 'px'
   row.style.overflow = 'hidden'
   void row.offsetHeight
-  row.style.transition = `height ${EXIT_MS}ms ${EASE}, opacity 160ms ${EASE}, margin ${EXIT_MS}ms ${EASE}, padding ${EXIT_MS}ms ${EASE}`
+  row.style.transition = `height ${heightMs}ms ${EASE}, opacity ${opacityMs}ms ${EASE}, margin ${heightMs}ms ${EASE}, padding ${heightMs}ms ${EASE}`
   row.style.height = '0px'
   row.style.paddingTop = '0px'
   row.style.paddingBottom = '0px'
@@ -37,7 +41,7 @@ export function collapseRow(row, onDone = () => {}) {
     onDone()
   }
   row.addEventListener('transitionend', end)
-  timer = setTimeout(end, EXIT_MS + 80)
+  timer = setTimeout(end, heightMs + 80)
   exits.set(row, cancel)
   return cancel
 }
