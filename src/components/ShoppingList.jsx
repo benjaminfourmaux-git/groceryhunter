@@ -20,7 +20,9 @@ const RING_CIRC = 2 * Math.PI * RING_R // circonférence de l'anneau de compte �
 // Tap uniquement : dès que le doigt bouge, l'appui est annulé (le rond se
 // relâche et rien n'est coché). Glisser depuis la case ne fait rien.
 const TAP_SLOP = 6 // px tolérés avant d'annuler l'appui
-const CONFIRM_MS = 120
+// Pas de pause avant le rangement : l'article descend dès le tap (une pause,
+// même courte, se ressentait comme un délai entre le clic et le déplacement).
+const CONFIRM_MS = 0
 const MOVE_MS = 250
 
 function BuyCheck({ bought, fraction, onToggle, t }) {
@@ -382,7 +384,7 @@ export default function ShoppingList({ items, now, memberById, onToggleBought, o
     const boughtAt = held ? held.boughtAt : it.bought_at
     holds.current.delete(id)
     // Une seconde pression avant le rangement annule simplement celui-ci.
-    if (!reducedMotion && !!boughtAt !== bought) {
+    if (CONFIRM_MS > 0 && !reducedMotion && !!boughtAt !== bought) {
       const timer = setTimeout(() => {
         holds.current.delete(id)
         setHeldPositions(new Map(holds.current))

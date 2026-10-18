@@ -184,7 +184,7 @@ export default function Sandbox() {
       flushSync(() => box().click())
       assert('Coche immédiate, même ligne', box().getAttribute('aria-pressed') === 'true' && row() === original)
       await sleep(60)
-      assert('Pause de confirmation', Math.abs(row().getBoundingClientRect().top - y) < 1)
+      assert('Rangement immédiat, sans pause', row().hasAttribute('data-sorting') && Math.abs(row().getBoundingClientRect().top - y) >= 1)
       await sleep(400)
       assert('Rangement terminé sans animation résiduelle', document.querySelector('.swipe-row:last-child') === row() && !row().hasAttribute('data-sorting'))
       flushSync(() => box().click()); await sleep(40); flushSync(() => box().click()); await sleep(450)
