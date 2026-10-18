@@ -1,6 +1,9 @@
 import Icon from './Icon'
 import Avatar from './Avatar'
 import { useLang } from '../lib/i18n'
+import { useLayoutEffect, useRef } from 'react'
+import usePresenceItems from '../lib/usePresenceItems'
+import { collapseRow, resetRow } from '../lib/swipeExit'
 
 function formatWhen(iso, t, locale) {
   const d = new Date(iso)
@@ -18,10 +21,11 @@ function formatWhen(iso, t, locale) {
 
 // Historique = corbeille récente : les articles cochés « acheté » y restent un
 // moment (T2) avant d'être supprimés définitivement. Lecture seule.
-export default function History({ items, memberById }) {
+export default function History({ items, memberById, active = true }) {
   const { t, locale } = useLang()
+  const present = usePresenceItems(items, active)
 
-  if (!items || items.length === 0) {
+  if (present.length === 0) {
     return (
       <div className="empty">
         <span className="empty-icon">
@@ -35,17 +39,26 @@ export default function History({ items, memberById }) {
 
   return (
     <ul className="hist-list">
-      {items.map((it) => {
+      {present.map(({ it, exiting }) => {
         const buyer = memberById[it.bought_by]
         return (
-          <li key={it.id} className="hist-item">
+          <HistoryRow key={it.id} exiting={exiting}>
             {buyer && <Avatar name={buyer.display_name} color={buyer.color} size={32} />}
             <span className="item-name">{it.name}</span>
             {it.quantity && <span className="qty-badge">{it.quantity}</span>}
             <span className="hist-when muted small">{formatWhen(it.bought_at, t, locale)}</span>
-          </li>
+          </HistoryRow>
         )
       })}
     </ul>
   )
+}
+
+function HistoryRow({ exiting, children }) {
+  const ref = useRef(null)
+  useLayoutEffect(() => {
+    if (exiting) return collapseRow(ref.current)
+    resetRow(ref.current)
+  }, [exiting])
+  return <li ref={ref} className="hist-item" data-exiting={exiting || undefined}>{children}</li>
 }

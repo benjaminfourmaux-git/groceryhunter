@@ -4,6 +4,8 @@ import Avatar from './Avatar'
 import { useLang } from '../lib/i18n'
 import { collapseRow, resetRow } from '../lib/swipeExit'
 import { T1_MS } from '../lib/config'
+import { reducedMotion } from '../lib/motion'
+import usePresenceItems from '../lib/usePresenceItems'
 
 const COMMIT_RATIO = 0.4 // fraction de la largeur de ligne à atteindre pour supprimer
 const FLICK_VELOCITY = 1.2 // px/ms vers la gauche : un geste vif supprime même court
@@ -17,22 +19,27 @@ const RING_CIRC = 2 * Math.PI * RING_R // circonférence de l'anneau de compte �
 // Tap uniquement : dès que le doigt bouge, l'appui est annulé (le rond se
 // relâche et rien n'est coché). Glisser depuis la case ne fait rien.
 const TAP_SLOP = 6 // px tolérés avant d'annuler l'appui
+const CONFIRM_MS = 120
+const MOVE_MS = 250
 
 function BuyCheck({ bought, fraction, onToggle, t }) {
   const press = useRef(null)
   const [pressed, setPressed] = useState(false)
 
-  // Un pétale tombe quand l'article passe à « acheté » (ici ou chez un autre
-  // membre). Rien au premier affichage d'un article déjà coché.
+  // Petite éclosion locale, sans particule qui tombe hors de la carte.
+  // Rien au premier affichage d'un article déjà coché.
   const [petal, setPetal] = useState(0)
+  const petalSequence = useRef(0)
   const wasBought = useRef(bought)
   useEffect(() => {
-    if (bought && !wasBought.current) setPetal((n) => n + 1)
+    if (bought && !wasBought.current) setPetal(++petalSequence.current)
+    if (!bought) setPetal(0)
     wasBought.current = bought
   }, [bought])
 
   function onPointerDown(e) {
-    press.current = { x: e.clientX, y: e.clientY, pid: e.pointerId }
+    if (e.isPrimary === false || e.button !== 0) return
+    press.current = { x: e.clientX, y: e.clientY, pid: e.pointerId, released: false }
     setPressed(true)
   }
   function onPointerMove(e) {
@@ -43,12 +50,30 @@ function BuyCheck({ bought, fraction, onToggle, t }) {
       setPressed(false)
     }
   }
-  function release() {
+  function onPointerUp(e) {
+    const p = press.current
+    if (!p || e.pointerId !== p.pid) return
+    if (Math.abs(e.clientX - p.x) > TAP_SLOP || Math.abs(e.clientY - p.y) > TAP_SLOP) {
+      press.current = null
+    } else {
+      p.released = true
+    }
     setPressed(false)
+  }
+  function cancel(e) {
+    if (press.current && e.pointerId !== press.current.pid) return
+    press.current = null
+    setPressed(false)
+  }
+  function onPointerLeave(e) {
+    // Au toucher, pointerout/leave peut précéder le clic après pointerup.
+    // Le doigt a déjà été relevé : ce n'est plus un glissement à annuler.
+    if (press.current?.released) return
+    cancel(e)
   }
   function onClick(e) {
     // e.detail === 0 : activation au clavier (Entrée / Espace), toujours valide.
-    const valid = e.detail === 0 || press.current
+    const valid = e.detail === 0 || press.current?.released
     press.current = null
     if (valid) onToggle()
   }
@@ -59,11 +84,12 @@ function BuyCheck({ bought, fraction, onToggle, t }) {
       className={'buy-check' + (bought ? ' bought' : '') + (pressed ? ' pressed' : '')}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
-      onPointerUp={release}
-      onPointerCancel={() => { press.current = null; release() }}
-      onPointerLeave={() => { press.current = null; release() }}
+      onPointerUp={onPointerUp}
+      onPointerCancel={cancel}
+      onPointerLeave={onPointerLeave}
       onClick={onClick}
       aria-label={bought ? t('aria_uncheck') : t('aria_check')}
+      aria-pressed={bought}
     >
       {bought && (
         <svg className="buy-ring" viewBox="0 0 32 32" aria-hidden="true">
@@ -79,10 +105,18 @@ function BuyCheck({ bought, fraction, onToggle, t }) {
         </svg>
       )}
       <span className="buy-dot" aria-hidden="true">
-        {bought && <Icon name="check" size={14} strokeWidth={3} />}
+        {bought && (
+          <svg className="buy-tick" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m5 12 5 5 9-10" pathLength="1" />
+          </svg>
+        )}
       </span>
       {petal > 0 && (
-        <span key={petal} className="petal" aria-hidden="true" onAnimationEnd={() => setPetal(0)} />
+        <span key={petal} className="petal-bloom" aria-hidden="true"
+          onAnimationEnd={() => setPetal((current) => current === petal ? 0 : current)}>
+          <i /><i /><i />
+        </span>
       )}
     </button>
   )
@@ -95,19 +129,45 @@ function agoLabel(ms, t) {
   return n < 1 ? t('just_now') : t('ago_min', { n })
 }
 
+function ListSeparator({ exiting, children }) {
+  const ref = useRef(null)
+  useLayoutEffect(() => {
+    if (exiting) return collapseRow(ref.current)
+    resetRow(ref.current)
+  }, [exiting])
+  return <li ref={ref} data-flip-id="separator" className="list-sep" aria-hidden="true"><span>{children}</span></li>
+}
+
 // Chaque ligne gère son propre swipe (suppression). Glisser au-delà du seuil =
 // suppression ; en deçà, la ligne revient. Un tap sur la case coche l'article.
-function SwipeRow({ it, now, adder, onToggleBought, onDelete, t }) {
+function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, exiting, t }) {
   const rowRef = useRef(null)
   const fgRef = useRef(null)
   const drag = useRef(null)
   const removing = useRef(false)
+  const wasExiting = useRef(false)
+
+  useLayoutEffect(() => {
+    const row = rowRef.current
+    if (exiting) {
+      cancel()
+      wasExiting.current = true
+      removing.current = true
+      return collapseRow(row)
+    }
+    if (wasExiting.current) {
+      wasExiting.current = false
+      removing.current = false
+      resetRow(row, fgRef.current)
+    }
+  }, [exiting])
 
   const bought = !!it.bought_at
   const boughtMs = bought ? Date.parse(it.bought_at) : 0
   const fraction = bought ? Math.max(0, Math.min(1, (T1_MS - (now - boughtMs)) / T1_MS)) : 0
 
   function down(e) {
+    if (!e.isPrimary || e.button !== 0 || drag.current) return
     if (removing.current) return
     if (e.target.closest('.buy-check')) return // la case ne lance jamais de glissé
     drag.current = {
@@ -120,6 +180,14 @@ function SwipeRow({ it, now, adder, onToggleBought, onDelete, t }) {
       lastX: e.clientX,
       lastT: e.timeStamp,
       vx: 0,
+    }
+    const interrupt = () => cancel()
+    const visibility = () => { if (document.hidden) cancel() }
+    window.addEventListener('blur', interrupt)
+    document.addEventListener('visibilitychange', visibility)
+    drag.current.cleanup = () => {
+      window.removeEventListener('blur', interrupt)
+      document.removeEventListener('visibilitychange', visibility)
     }
     fgRef.current.style.transition = 'none'
     try { fgRef.current.setPointerCapture(e.pointerId) } catch { /* noop */ }
@@ -152,45 +220,52 @@ function SwipeRow({ it, now, adder, onToggleBought, onDelete, t }) {
   function up(e) {
     const d = drag.current
     if (!d || e.pointerId !== d.pid) return
+    d.cleanup?.()
     drag.current = null
 
     const fg = fgRef.current
     const row = rowRef.current
     fg.style.transition = ''
 
-    const flicked = d.vx <= -FLICK_VELOCITY && -d.x >= FLICK_MIN_DX
+    const flicked = e.timeStamp - d.lastT < 100 && d.vx <= -FLICK_VELOCITY && -d.x >= FLICK_MIN_DX
     const commit = d.axis === 'h' && (row.hasAttribute('data-armed') || flicked)
 
     if (commit) {
       removing.current = true
-      const speed = Math.max(Math.abs(d.vx), 0.3)
-      const remaining = d.width + d.x
-      const dur = Math.min(360, Math.max(120, remaining / speed))
-      fg.style.transition = `transform ${Math.round(dur)}ms cubic-bezier(0.22, 1, 0.36, 1)`
+      const dur = reducedMotion() ? 0 : 180
+      fg.style.transition = `transform ${dur}ms cubic-bezier(0.22, 1, 0.36, 1)`
       fg.style.transform = `translateX(-${d.width}px)`
-      let called = false
-      const finish = async () => {
-        if (called) return
-        called = true
-        fg.removeEventListener('transitionend', finish)
-        try {
-          await new Promise((res) => collapseRow(row, res))
-          await onDelete(it.id)
-        } catch {
-          removing.current = false
-          resetRow(row, fg)
-        }
-      }
-      fg.addEventListener('transitionend', finish)
-      setTimeout(finish, 400)
+      // La mutation et le repli se font ensemble, au lieu d'attendre deux
+      // animations successives avant de commencer la requête.
+      Promise.resolve(onDelete(it.id)).catch(() => {
+        removing.current = false
+        resetRow(row, fg)
+      })
     } else {
       fg.style.transform = ''
       row.removeAttribute('data-armed')
     }
   }
 
+  function cancel(e) {
+    const d = drag.current
+    if (!d || (e?.pointerId != null && e.pointerId !== d.pid)) return
+    d.cleanup?.()
+    drag.current = null
+    fgRef.current.style.transition = ''
+    fgRef.current.style.transform = ''
+    rowRef.current.removeAttribute('data-armed')
+  }
+  useEffect(() => () => drag.current?.cleanup?.(), [])
+
   return (
-    <li ref={rowRef} data-flip-id={it.id} className={'swipe-row' + (bought ? ' bought' : '')}>
+    <li ref={rowRef} data-flip-id={it.id} data-exiting={exiting || undefined}
+      inert={exiting ? '' : undefined} className={'swipe-row' + (bought ? ' bought' : '')}
+      onAnimationEnd={(e) => {
+        if (e.target === e.currentTarget && e.animationName === 'item-in') {
+          e.currentTarget.setAttribute('data-arrived', '')
+        }
+      }}>
       <div className="swipe-bg">
         <button
           type="button"
@@ -210,14 +285,17 @@ function SwipeRow({ it, now, adder, onToggleBought, onDelete, t }) {
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
-        onPointerCancel={up}
+        onPointerCancel={cancel}
+        onLostPointerCapture={cancel}
       >
         <div className="item-main">
           {adder && <Avatar name={adder.display_name} color={adder.color} size={32} />}
           <span className="item-name">{it.name}</span>
         </div>
         {it.quantity && <span className="qty-badge">{it.quantity}</span>}
-        {bought && <span className="item-when">{agoLabel(now - boughtMs, t)}</span>}
+        {/* Le libellé change la largeur disponible pour le nom : il apparaît
+            avec le rangement, pour ne pas déplacer les voisins une première fois. */}
+        {displayBoughtAt && <span className="item-when">{agoLabel(now - Date.parse(displayBoughtAt), t)}</span>}
         <BuyCheck
           bought={bought}
           fraction={fraction}
@@ -229,49 +307,156 @@ function SwipeRow({ it, now, adder, onToggleBought, onDelete, t }) {
   )
 }
 
-export default function ShoppingList({ items, now, memberById, onToggleBought, onDelete }) {
+export default function ShoppingList({ items, now, memberById, onToggleBought, onDelete, active = true }) {
   const { t } = useLang()
+  const present = usePresenceItems(items, active)
+  // Seule la liste visible fait vivre l'anneau chaque seconde. Le reste de
+  // l'application se réveille aux échéances T1/T2, sans retrier à chaque tick.
+  const [ringNow, setRingNow] = useState(now)
+  const hasBought = items.some((it) => !!it.bought_at)
+  useEffect(() => {
+    if (!active || !hasBought) return
+    let interval
+    function sync() {
+      clearInterval(interval)
+      if (document.hidden) return
+      setRingNow(Date.now())
+      interval = setInterval(() => setRingNow(Date.now()), 1000)
+    }
+    sync()
+    document.addEventListener('visibilitychange', sync)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', sync)
+    }
+  }, [active, hasBought])
+  const [reducedMotion, setReducedMotion] = useState(
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  )
+  // Seul le rangement attend 120 ms. La coche et la requête partent tout de
+  // suite ; on conserve temporairement l'ancienne position de chaque article.
+  const holds = useRef(new Map())
+  const [heldPositions, setHeldPositions] = useState(new Map())
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    function change() {
+      setReducedMotion(media.matches)
+      if (media.matches) {
+        holds.current.forEach(({ timer }) => clearTimeout(timer))
+        holds.current.clear()
+        setHeldPositions(new Map())
+      }
+    }
+    change()
+    media.addEventListener('change', change)
+    return () => {
+      media.removeEventListener('change', change)
+      holds.current.forEach(({ timer }) => clearTimeout(timer))
+      holds.current.clear()
+    }
+  }, [])
 
-  // FLIP : quand un article est acheté il descend en bas ; les autres glissent.
-  // Ne se rejoue QUE si l'ordre change (pas à chaque tick du compte à rebours),
-  // et mesure avec offsetTop : insensible aux animations en cours et au scroll,
-  // sinon une mesure prise en plein glissement relançait une 2e animation.
+  function toggleBought(id, bought) {
+    const it = items.find((item) => item.id === id)
+    if (!it) return
+    const held = holds.current.get(id)
+    if (held) clearTimeout(held.timer)
+    const boughtAt = held ? held.boughtAt : it.bought_at
+    holds.current.delete(id)
+    // Une seconde pression avant le rangement annule simplement celui-ci.
+    if (!reducedMotion && !!boughtAt !== bought) {
+      const timer = setTimeout(() => {
+        holds.current.delete(id)
+        setHeldPositions(new Map(holds.current))
+      }, CONFIRM_MS)
+      holds.current.set(id, { boughtAt, timer })
+    }
+    setHeldPositions(new Map(holds.current))
+    onToggleBought(id, bought)
+  }
+
+  const presented = present.map(({ it, exiting }) => ({
+    it,
+    exiting,
+    boughtAt: heldPositions.has(it.id) ? heldPositions.get(it.id).boughtAt : it.bought_at,
+  }))
+  if (heldPositions.size) {
+    presented.sort((a, b) => {
+      if (!!a.boughtAt !== !!b.boughtAt) return a.boughtAt ? 1 : -1
+      return a.boughtAt
+        ? Date.parse(a.boughtAt) - Date.parse(b.boughtAt)
+        : Date.parse(b.it.created_at) - Date.parse(a.it.created_at)
+    })
+  }
+
+  // FLIP : article et voisins glissent ensemble, sans rebond ni auto-scroll.
+  // Le séparateur participe au mouvement, même si une seule ligne est présente.
+  // Un nouveau rangement reprend la position VISUELLE de l'animation précédente.
   const listRef = useRef(null)
   const prevTops = useRef(new Map())
-  const orderKey = items.map((it) => it.id).join('|')
+  const motions = useRef(new Map())
+  const orderKey = presented.map(({ it, boughtAt }) => `${it.id}:${!!boughtAt}`).join('|')
   useLayoutEffect(() => {
     const ul = listRef.current
-    if (!ul) {
-      prevTops.current = new Map()
-      return
-    }
-    const nodes = ul.querySelectorAll('[data-flip-id]')
+    const nodes = ul ? [...ul.querySelectorAll('[data-flip-id]')] : []
     const next = new Map()
     nodes.forEach((n) => next.set(n.dataset.flipId, n.offsetTop))
-
-    // Suppression en cours : collapseRow anime déjà la sortie → on saute le FLIP.
-    let removed = false
-    prevTops.current.forEach((_, id) => { if (!next.has(id)) removed = true })
-    if (removed) {
-      prevTops.current = next
-      return
-    }
-
+    const shifts = new Map()
     nodes.forEach((n) => {
       const id = n.dataset.flipId
       const prev = prevTops.current.get(id)
-      const nowTop = next.get(id)
-      if (prev != null && prev !== nowTop) {
-        n.animate(
-          [{ transform: `translateY(${prev - nowTop}px)` }, { transform: 'translateY(0)' }],
-          { duration: 340, easing: 'cubic-bezier(0.34, 1.3, 0.4, 1)' }
-        )
+      const offset = motions.current.has(id)
+        ? new DOMMatrixReadOnly(getComputedStyle(n).transform).m42
+        : 0
+      if (prev != null) shifts.set(id, prev + offset - next.get(id))
+    })
+    // Safari peut relancer une animation CSS lorsqu'un même nœud est déplacé
+    // dans le DOM. Une carte déjà présente ne doit plus rejouer son entrée :
+    // seul le FLIP pilote son déplacement, y compris avant la fin de l'entrée.
+    nodes.forEach((n) => {
+      if (prevTops.current.has(n.dataset.flipId) && n.classList.contains('swipe-row')) {
+        n.setAttribute('data-arrived', '')
       }
     })
-    prevTops.current = next
-  }, [orderKey])
+    motions.current.forEach(({ animation, node }) => {
+      animation.onfinish = null
+      animation.cancel()
+      node.removeAttribute('data-sorting')
+    })
+    motions.current.clear()
 
-  if (items.length === 0) {
+    // Suppression en cours : collapseRow anime déjà la sortie → on saute le FLIP.
+    const removed = [...prevTops.current.keys()].some((id) => id !== 'separator' && !next.has(id))
+    if (active && !reducedMotion && !removed && !ul?.querySelector('[data-exiting]')) {
+      nodes.forEach((n) => {
+        const id = n.dataset.flipId
+        const shift = shifts.get(id)
+        if (shift == null || Math.abs(shift) < 0.5) return
+        n.setAttribute('data-sorting', '')
+        const animation = n.animate(
+          [{ transform: `translateY(${shift}px)` }, { transform: 'translateY(0)' }],
+          { duration: MOVE_MS, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+        )
+        motions.current.set(id, { animation, node: n })
+        animation.onfinish = () => {
+          motions.current.delete(id)
+          n.removeAttribute('data-sorting')
+          animation.cancel()
+        }
+      })
+    }
+    prevTops.current = next
+  }, [orderKey, reducedMotion, active])
+
+  useEffect(() => () => {
+    motions.current.forEach(({ animation }) => {
+      animation.onfinish = null
+      animation.cancel()
+    })
+    motions.current.clear()
+  }, [])
+
+  if (presented.length === 0) {
     return (
       <div className="list-view">
         <div className="empty">
@@ -288,24 +473,26 @@ export default function ShoppingList({ items, now, memberById, onToggleBought, o
   return (
     <div className="list-view">
       <ul className="items" ref={listRef}>
-        {items.flatMap((it, i) => {
+        {presented.flatMap(({ it, boughtAt, exiting }, i) => {
           // Séparateur « En partance » avant le premier article coché.
           // flatMap (liste PLATE de frères à clé) : un tableau par article
           // ferait réconcilier React par position, et chaque coche recréerait
           // toutes les lignes (animation d'entrée rejouée, pétale perdu).
-          const firstBought = it.bought_at && (i === 0 || !items[i - 1].bought_at)
+          const firstBought = boughtAt && (i === 0 || !presented[i - 1].boughtAt)
           return [
             firstBought && (
-              <li key="sep" className="list-sep" aria-hidden="true">
-                <span>{t('leaving_soon')}</span>
-              </li>
+              <ListSeparator key="sep" exiting={presented.every((entry) => !entry.boughtAt || entry.exiting)}>
+                {t('leaving_soon')}
+              </ListSeparator>
             ),
             <SwipeRow
               key={it.id}
               it={it}
-              now={now}
+              displayBoughtAt={boughtAt}
+              now={Math.max(now, ringNow)}
+              exiting={exiting}
               adder={memberById[it.added_by]}
-              onToggleBought={onToggleBought}
+              onToggleBought={toggleBought}
               onDelete={onDelete}
               t={t}
             />,

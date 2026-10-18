@@ -2,7 +2,7 @@
 //  i18n maison (sans dépendance). FR ⇄ EN.
 //  - dictionnaires fr/en (valeur = chaîne, ou fonction(vars) pour les pluriels)
 //  - persistance localStorage
-//  - bascule « seamless » via l'API View Transitions (fondu enchaîné des mots)
+//  - fondu local des libellés traduits
 //  Seules les chaînes de l'UI sont traduites ; le contenu saisi ne l'est pas.
 // ============================================================================
 
@@ -15,11 +15,15 @@ import {
   useRef,
   useState,
 } from 'react'
-import { flushSync } from 'react-dom'
+import { animateCopyChange } from './copyMotion'
 
 const fr = {
   // Onboarding
   app_name: 'Liste de courses',
+  onboarding_wordmark: 'Courses du foyer',
+  onboarding_title: 'Les courses,\nen bonne compagnie.',
+  onboarding_intro: 'Ce qui manque à la maison,\nsur une seule et même liste.',
+  onboarding_access: 'Accès au foyer',
   tagline: 'La liste commune de la maison, synchronisée sur tous les téléphones.',
   tab_create: 'Créer un foyer',
   tab_join: 'Rejoindre',
@@ -47,6 +51,8 @@ const fr = {
   theme_light: 'Jour',
   theme_dark: 'Crépuscule',
   theme_change: 'Changer le thème',
+  theme_light_short: 'Clair',
+  theme_dark_short: 'Soir',
   settings_language: 'Langue',
   bell_on: 'Notifications activées',
   bell_blocked: 'Notifications bloquées',
@@ -63,7 +69,7 @@ const fr = {
   stats_title: 'Classement',
   stats_items_unit: ({ n }) => (n > 1 ? 'articles' : 'article'),
   stats_sub: 'Nombre d’articles achetés depuis le début.',
-  leaving_soon: 'En partance',
+  leaving_soon: 'Déjà achetés',
   just_now: 'à l’instant',
   ago_min: ({ n }) => `il y a ${n} min`,
   stats_empty: 'Personne n’a encore rien acheté.',
@@ -117,6 +123,10 @@ const fr = {
 
 const en = {
   app_name: 'Shopping list',
+  onboarding_wordmark: 'Home groceries',
+  onboarding_title: 'Shopping feels\nbetter together.',
+  onboarding_intro: 'Everything your home needs,\non one shared list.',
+  onboarding_access: 'Access your home',
   tagline: 'Your home’s shared list, synced across every phone.',
   tab_create: 'Create a home',
   tab_join: 'Join',
@@ -143,6 +153,8 @@ const en = {
   theme_light: 'Day',
   theme_dark: 'Dusk',
   theme_change: 'Change theme',
+  theme_light_short: 'Light',
+  theme_dark_short: 'Evening',
   settings_language: 'Language',
   bell_on: 'Notifications on',
   bell_blocked: 'Notifications blocked',
@@ -159,7 +171,7 @@ const en = {
   stats_title: 'Leaderboard',
   stats_items_unit: ({ n }) => (n > 1 ? 'items' : 'item'),
   stats_sub: 'Items bought since the start.',
-  leaving_soon: 'Leaving soon',
+  leaving_soon: 'Already bought',
   just_now: 'just now',
   ago_min: ({ n }) => `${n} min ago`,
   stats_empty: 'No one has bought anything yet.',
@@ -240,16 +252,9 @@ export function LanguageProvider({ children }) {
     document.documentElement.lang = lang
   }, [lang])
 
-  // Transition fluide (View Transitions) au changement de langue.
+  // Fondu local des étiquettes traduites, sans capturer/fondre toute la page.
   const animate = useCallback((apply) => {
-    const reduce =
-      typeof window !== 'undefined' &&
-      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    if (typeof document !== 'undefined' && document.startViewTransition && !reduce) {
-      document.startViewTransition(() => flushSync(apply))
-    } else {
-      apply()
-    }
+    animateCopyChange(apply)
   }, [])
 
   const toggleLang = useCallback(() => {

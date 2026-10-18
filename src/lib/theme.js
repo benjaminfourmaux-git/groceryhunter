@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import { EASE, reducedMotion } from './motion'
 
 // Thème « Grand ciel » : 'auto' suit le réglage clair/sombre du téléphone ;
 // 'light' (plein jour) ou 'dark' (crépuscule) le forcent. Le choix est propre à
@@ -30,8 +31,38 @@ function withoutTransitions(change) {
   root.classList.remove('theme-switching')
 }
 
-function apply() {
-  withoutTransitions(setTheme)
+let themeTransition = null
+function apply(notify) {
+  const change = () => withoutTransitions(() => { setTheme(); notify?.() })
+  themeTransition?.skipTransition()
+  if (reducedMotion()) { change(); return }
+  if (document.startViewTransition) {
+    document.documentElement.classList.add('theme-transition')
+    const transition = document.startViewTransition(change)
+    themeTransition = transition
+    transition.ready.catch(() => {})
+    transition.finished.finally(() => {
+      if (themeTransition !== transition) return
+      themeTransition = null
+      document.documentElement.classList.remove('theme-transition')
+    }).catch(() => {})
+    return
+  }
+  // Safari plus ancien : fondu des surfaces, sans imposer une API récente.
+  const nodes = [...document.querySelectorAll('html, body, .app, .appbar, .sky-fill, .dock-ground, .modal, .morph, .item, .hist-item, input, .seg, .seg-btn, .onboarding-screen, .onboarding-access, .onboarding-sky, .onboarding-primary, .onboarding-tabs, .buy-dot, .qty-badge, .tabbar, .tab-indicator')]
+  const colors = nodes.map((node) => {
+    const style = getComputedStyle(node)
+    return { backgroundColor: style.backgroundColor, color: style.color, fill: style.fill }
+  })
+  change()
+  const next = nodes.map((node) => {
+    const style = getComputedStyle(node)
+    return { backgroundColor: style.backgroundColor, color: style.color, fill: style.fill }
+  })
+  nodes.forEach((node, i) => {
+    const animation = node.animate([colors[i], next[i]], { duration: 180, easing: EASE })
+    animation.onfinish = () => animation.cancel()
+  })
 }
 
 function setTheme() {
@@ -55,14 +86,19 @@ export function initTheme() {
 }
 
 export function cycleTheme() {
-  pref = ORDER[(ORDER.indexOf(pref) + 1) % ORDER.length]
+  setThemePref(ORDER[(ORDER.indexOf(pref) + 1) % ORDER.length])
+}
+
+// Choix direct (sélecteur Clair / Soir des réglages).
+export function setThemePref(next) {
+  if (!ORDER.includes(next) || next === pref) return
+  pref = next
   try {
     localStorage.setItem(KEY, pref)
   } catch {
     /* stockage indisponible : le choix vaut pour la session */
   }
-  apply()
-  listeners.forEach((l) => l())
+  apply(() => listeners.forEach((l) => l()))
 }
 
 export function useThemePref() {
@@ -73,4 +109,20 @@ export function useThemePref() {
     },
     () => pref
   )
+}
+
+// Thème réellement affiché ('light' | 'dark') : le choix forcé, sinon celui du
+// téléphone (suivi en direct en mode auto).
+const darkQuery = typeof window !== 'undefined' ? window.matchMedia?.('(prefers-color-scheme: dark)') : null
+
+export function useEffectiveTheme() {
+  const p = useThemePref()
+  const systemDark = useSyncExternalStore(
+    (l) => {
+      darkQuery?.addEventListener?.('change', l)
+      return () => darkQuery?.removeEventListener?.('change', l)
+    },
+    () => !!darkQuery?.matches
+  )
+  return p === 'auto' ? (systemDark ? 'dark' : 'light') : p
 }

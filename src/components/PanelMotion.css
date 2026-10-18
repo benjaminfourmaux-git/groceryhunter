@@ -1,0 +1,53 @@
+/* Styles de mouvement locaux : l'apparence reste définie dans index.css. */
+.modal-overlay.panel-overlay,
+.panel-overlay > .modal {
+  animation: none;
+}
+
+.panel-overlay > .modal {
+  will-change: transform;
+}
+
+.morph.panel-morph {
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+  will-change: auto;
+}
+
+.morph.panel-morph-surface {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: top right;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+.panel-morph .morph-menu {
+  transition: none;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.panel-morph-scrim {
+  transition: none;
+}
+
+.panel-morph:not(.is-open),
+.panel-morph-scrim:not(.is-open) {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-overlay,
+  .panel-overlay *,
+  .panel-morph,
+  .panel-morph *,
+  .panel-morph-scrim {
+    animation: none !important;
+    transition: none !important;
+  }
+}

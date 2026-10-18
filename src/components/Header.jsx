@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Icon from './Icon'
 import { useLang } from '../lib/i18n'
 import { copyText } from '../lib/clipboard'
@@ -49,12 +49,15 @@ function Sky() {
 export default function Header({ household, onShowStats, onOpenSettings, hideSettingsBtn, settingsBtnRef }) {
   const { t } = useLang()
   const [copied, setCopied] = useState(false)
+  const copyTimer = useRef(null)
+  useEffect(() => () => clearTimeout(copyTimer.current), [])
 
   async function copyCode() {
     const ok = await copyText(household.join_code)
     if (ok) {
       setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
+      clearTimeout(copyTimer.current)
+      copyTimer.current = setTimeout(() => setCopied(false), 1500)
     }
   }
 
@@ -86,7 +89,7 @@ export default function Header({ household, onShowStats, onOpenSettings, hideSet
           title={t('settings_title')}
           style={{ opacity: hideSettingsBtn ? 0 : 1 }}
         >
-          <Icon name="sliders" size={21} />
+          <Icon name="more" size={20} />
         </button>
       </div>
     </header>

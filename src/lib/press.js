@@ -1,83 +1,42 @@
-// ============================================================================
-//  Effet « press organique » : au maintien d'un bouton, léger grossissement et
-//  suivi du doigt ; retour élastique au relâchement. Délégué au document pour
-//  couvrir tous les <button> sans toucher chaque composant.
-//  Les onglets (.tabbar) sont exclus : ils ont leur propre interaction (slide).
-// ============================================================================
-
-const SCALE = 1.045 // « léger grossissement »
-const FOLLOW = 0.18 // fraction du déplacement du doigt suivie
-const MAX = 9 // décalage maximum en px
-
+// Appui discret au centre du bouton. Aucun contrôle ne suit le doigt ; les
+// gestes dédiés (cases, onglets, poignée) gardent leur propre retour tactile.
 export function initPress() {
-  let el = null
-  let pid = null
-  let cx = 0
-  let cy = 0
-
-  function down(e) {
-    if (e.pointerType === 'mouse' && e.button !== 0) return
-    const btn = e.target.closest('button')
-    // Onglets et boutons de l'en-tête exclus : ils gardent un press simple.
-    // Case « acheté » exclue aussi : elle ne doit pas suivre le doigt.
-    if (
-      !btn ||
-      btn.disabled ||
-      btn.closest('.tabbar') ||
-      btn.closest('.appbar') ||
-      btn.classList.contains('buy-check')
-    )
-      return
-
-    el = btn
-    pid = e.pointerId
-    const r = btn.getBoundingClientRect()
-    cx = r.left + r.width / 2
-    cy = r.top + r.height / 2
-    btn.style.willChange = 'transform'
-    btn.style.transition = 'transform .14s cubic-bezier(.34,1.45,.5,1)'
-    btn.style.transform = `scale(${SCALE})`
-    requestAnimationFrame(() => {
-      if (el === btn) btn.style.transition = 'transform .06s linear'
-    })
-  }
-
-  function move(e) {
-    if (!el || e.pointerId !== pid) return
-    const tx = clamp((e.clientX - cx) * FOLLOW)
-    const ty = clamp((e.clientY - cy) * FOLLOW)
-    el.style.transform = `translate(${tx}px, ${ty}px) scale(${SCALE})`
-  }
-
+  let button = null
+  let pointer = null
+  let startX = 0
+  let startY = 0
   function release() {
-    if (!el) return
-    const btn = el
-    el = null
-    pid = null
-    btn.style.transition = 'transform .34s cubic-bezier(.34,1.4,.5,1)'
-    btn.style.transform = ''
-    const done = () => {
-      btn.style.transition = ''
-      btn.style.willChange = ''
-      btn.removeEventListener('transitionend', done)
-    }
-    btn.addEventListener('transitionend', done)
+    button?.removeAttribute('data-pressing')
+    button = null
+    pointer = null
   }
-
-  function clamp(v) {
-    return Math.max(-MAX, Math.min(MAX, v))
+  function down(e) {
+    if (!e.isPrimary || e.button !== 0) return
+    release()
+    const target = e.target.closest?.('button')
+    if (!target || target.disabled || target.closest('.tabbar') || target.classList.contains('buy-check')) return
+    button = target
+    pointer = e.pointerId
+    startX = e.clientX
+    startY = e.clientY
+    button.setAttribute('data-pressing', '')
   }
-
+  function move(e) {
+    if (e.pointerId !== pointer) return
+    if (Math.hypot(e.clientX - startX, e.clientY - startY) > 10) release()
+  }
   const opts = { passive: true }
   document.addEventListener('pointerdown', down, opts)
   document.addEventListener('pointermove', move, opts)
   document.addEventListener('pointerup', release, opts)
   document.addEventListener('pointercancel', release, opts)
-
+  window.addEventListener('blur', release)
   return () => {
+    release()
     document.removeEventListener('pointerdown', down)
     document.removeEventListener('pointermove', move)
     document.removeEventListener('pointerup', release)
     document.removeEventListener('pointercancel', release)
+    window.removeEventListener('blur', release)
   }
 }

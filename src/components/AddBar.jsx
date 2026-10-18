@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Icon from './Icon'
 import { useLang } from '../lib/i18n'
 
@@ -18,6 +18,16 @@ export default function AddBar({ onAdd }) {
   // déclenché par la fermeture du clavier peuvent tirer quasi simultanément.
   const adding = useRef(false)
   const touch = useRef(null)
+  const timers = useRef(new Set())
+  const focusFrame = useRef(0)
+  function defer(callback, ms) {
+    const timer = setTimeout(() => { timers.current.delete(timer); callback() }, ms)
+    timers.current.add(timer)
+  }
+  useEffect(() => () => {
+    timers.current.forEach(clearTimeout)
+    cancelAnimationFrame(focusFrame.current)
+  }, [])
 
   function commitAdd() {
     const n = name.trim()
@@ -26,13 +36,13 @@ export default function AddBar({ onAdd }) {
     onAdd(n, qty)
     setName('')
     setQty('')
-    setTimeout(() => { adding.current = false }, 120)
+    defer(() => { adding.current = false }, 120)
   }
 
   // Touche « OK » / Entrée (plus de <form> : Safari s'en sert pour proposer
   // le remplissage automatique de contacts au-dessus du clavier).
   function onKeyDown(e) {
-    if (e.key !== 'Enter') return
+    if (e.key !== 'Enter' || e.nativeEvent.isComposing) return
     e.preventDefault()
     commitAdd()
     e.currentTarget.blur()
@@ -41,7 +51,7 @@ export default function AddBar({ onAdd }) {
   // Fermer le clavier (bouton « OK » iOS, tap ailleurs) ajoute l'article ; sauf
   // si le focus passe à l'autre champ de la barre (on complète la quantité).
   function onFieldBlur() {
-    setTimeout(() => {
+    defer(() => {
       const active = document.activeElement
       if (active && active.closest && active.closest('.add-bar')) return
       commitAdd()
@@ -67,7 +77,8 @@ export default function AddBar({ onAdd }) {
     e.preventDefault()
     el.style.transform = 'translateY(-2000px)'
     el.focus({ preventScroll: true })
-    requestAnimationFrame(() => { el.style.transform = '' })
+    cancelAnimationFrame(focusFrame.current)
+    focusFrame.current = requestAnimationFrame(() => { el.style.transform = '' })
   }
 
   const fieldProps = {
@@ -75,6 +86,7 @@ export default function AddBar({ onAdd }) {
     onKeyDown,
     onTouchStart,
     onTouchEnd,
+    onTouchCancel: () => { touch.current = null },
     enterKeyHint: 'done',
     autoComplete: 'off',
     'data-form-type': 'other',

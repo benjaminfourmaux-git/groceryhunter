@@ -15,6 +15,10 @@ import StatsPanel from './components/StatsPanel'
 import BottomSheet from './components/BottomSheet'
 import Icon from './components/Icon'
 import SettingsMenu from './components/SettingsMenu'
+import Toast from './components/Toast'
+import { useLifecycleClock } from './lib/lifecycle'
+import useKeyboardDock from './lib/useKeyboardDock'
+import useTabGesture from './lib/useTabGesture'
 
 const boughtMsOf = (it) => (it.bought_at ? Date.parse(it.bought_at) : null)
 
@@ -25,7 +29,7 @@ export default function App() {
   const [member, setMember] = useState(null)
   const [members, setMembers] = useState([])
   const [items, setItems] = useState([])
-  const [now, setNow] = useState(() => Date.now()) // tick 1s : fait vivre les comptes à rebours
+  const now = useLifecycleClock(items)
   const [view, setView] = useState('list') // list | history
   const [pushState, setPushState] = useState('default')
   const [leaving, setLeaving] = useState(false)
@@ -53,38 +57,26 @@ export default function App() {
   // Table id → membre : nom + couleur cohérents dans la liste, l'historique, les stats.
   const memberById = useMemo(() => Object.fromEntries(members.map((m) => [m.id, m])), [members])
 
-  // ---- Partition dérivée de l'heure courante -------------------------------
-  // À acheter (bought_at vide) + achetés depuis < T1 (compte à rebours, en bas).
-  const listItems = useMemo(() => {
-    const toBuy = []
-    const counting = []
-    for (const it of items) {
-      const b = boughtMsOf(it)
-      if (b == null) toBuy.push(it)
-      else if (now - b < T1_MS) counting.push(it)
-    }
-    toBuy.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)) // récents en haut
-    counting.sort((a, b) => boughtMsOf(a) - boughtMsOf(b)) // le dernier acheté tout en bas
-    return [...toBuy, ...counting]
-  }, [items, now])
-
-  // Historique = achetés depuis ≥ T1 mais < T1+T2.
-  const historyItems = useMemo(
-    () =>
-      items
-        .filter((it) => {
-          const b = boughtMsOf(it)
-          return b != null && now - b >= T1_MS && now - b < T1_MS + T2_MS
-        })
-        .sort((a, b) => boughtMsOf(b) - boughtMsOf(a)),
-    [items, now]
-  )
+  // Tri uniquement quand les données changent ; l'horloge ne filtre qu'aux
+  // échéances, tandis que les anneaux vivent dans la liste visible.
+  const orderedItems = useMemo(() => [...items].sort((a, b) => {
+    if (!!a.bought_at !== !!b.bought_at) return a.bought_at ? 1 : -1
+    return a.bought_at
+      ? boughtMsOf(a) - boughtMsOf(b)
+      : Date.parse(b.created_at) - Date.parse(a.created_at)
+  }), [items])
+  const listItems = useMemo(() => orderedItems.filter((it) =>
+    !it.bought_at || now - boughtMsOf(it) < T1_MS
+  ), [orderedItems, now])
+  const historyItems = useMemo(() => orderedItems.filter((it) => {
+    const bought = boughtMsOf(it)
+    return bought != null && now - bought >= T1_MS && now - bought < T1_MS + T2_MS
+  }).reverse(), [orderedItems, now])
 
   const toBuyCount = useMemo(() => items.reduce((n, it) => n + (it.bought_at ? 0 : 1), 0), [items])
 
   const showToast = useCallback((msg, kind = 'info') => {
-    setToast({ msg, kind })
-    setTimeout(() => setToast(null), 3200)
+    setToast({ id: uuid(), msg, kind })
   }, [])
 
   const loadItems = useCallback(async (h) => {
@@ -97,69 +89,8 @@ export default function App() {
   // Effet « press organique » sur tous les boutons (une seule fois).
   useEffect(() => initPress(), [])
 
-  // Tick 1s : comptes à rebours + bascule liste↔historique quand T1/T2 passent.
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [])
-
-  // Clavier mobile : l'app garde toute la hauteur de l'écran (le clavier passe
-  // par-dessus et cache la barre d'onglets) ; seule la barre d'ajout se soulève
-  // pour se poser juste au-dessus du clavier (--kb-lift, animé en CSS).
-  // La hauteur du clavier se lit sur le VisualViewport. iOS ne la donne qu'une
-  // fois le clavier ouvert : on réutilise la dernière hauteur connue dès le
-  // focus, pour que la barre monte en même temps que le clavier.
-  useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-    const root = document.documentElement
-    const GAP = 8 // espace entre la barre d'ajout et le clavier
-    let raf = 0
-    let lastKb = 0
-
-    const apply = (kb) => {
-      // Distance barre d'ajout → bas de l'écran, clavier fermé. Mesurée en
-      // offsets (hors transform) dans le socle du dock, posé au ras du bas.
-      const ground = document.querySelector('.dock-ground')
-      const bar = document.querySelector('.add-bar')
-      const under = ground && bar ? ground.offsetHeight - (bar.offsetTop + bar.offsetHeight) : 0
-      const lift = kb > 0 ? Math.max(0, kb + GAP - under) : 0
-      root.style.setProperty('--kb-lift', lift + 'px')
-    }
-
-    const sync = () => {
-      cancelAnimationFrame(raf)
-      raf = requestAnimationFrame(() => {
-        root.style.setProperty('--vv-top', vv.offsetTop + 'px')
-        const kb = Math.max(0, Math.round(root.clientHeight - vv.height))
-        if (kb > 0) lastKb = kb
-        apply(kb)
-        // Clavier refermé : annule tout reste de défilement du document.
-        if (kb === 0 && window.scrollY !== 0) window.scrollTo(0, 0)
-      })
-    }
-
-    const inAddBar = (el) => !!(el && el.closest && el.closest('.add-bar'))
-    const onFocusIn = (e) => {
-      if (inAddBar(e.target) && lastKb > 0) apply(lastKb)
-    }
-    const onFocusOut = (e) => {
-      if (inAddBar(e.target) && !inAddBar(e.relatedTarget)) apply(0)
-    }
-
-    vv.addEventListener('resize', sync)
-    vv.addEventListener('scroll', sync)
-    document.addEventListener('focusin', onFocusIn)
-    document.addEventListener('focusout', onFocusOut)
-    sync()
-    return () => {
-      cancelAnimationFrame(raf)
-      vv.removeEventListener('resize', sync)
-      vv.removeEventListener('scroll', sync)
-      document.removeEventListener('focusin', onFocusIn)
-      document.removeEventListener('focusout', onFocusOut)
-    }
-  }, [])
+  useKeyboardDock()
+  useTabGesture(tabbarRef, indicatorRef, viewRef, setView, phase)
 
   // Mémorise la langue du membre côté serveur → notifications push localisées.
   useEffect(() => {
@@ -193,81 +124,6 @@ export default function App() {
         cleaning.current = false
       })
   }, [now, items, hid])
-
-  // Slide Liste/Historique : maintien + déplacement linéaire, aimant au relâchement.
-  useEffect(() => {
-    const bar = tabbarRef.current
-    const ind = indicatorRef.current
-    if (!bar || !ind) return
-
-    let active = false
-    let pid = null
-    let startX = 0
-    let startFrac = 0
-    let frac = 0
-    let moved = false
-    let downTab = null
-
-    const place = (f) => {
-      frac = Math.max(0, Math.min(1, f))
-      ind.style.transform = `translateX(${frac * 100}%)`
-    }
-
-    function down(e) {
-      active = true
-      moved = false
-      pid = e.pointerId
-      startX = e.clientX
-      startFrac = viewRef.current === 'history' ? 1 : 0
-      downTab = e.target.closest('.tab')
-      ind.style.transition = 'none'
-      place(startFrac)
-      try {
-        bar.setPointerCapture(pid)
-      } catch {
-        /* noop */
-      }
-    }
-    function move(e) {
-      if (!active || e.pointerId !== pid) return
-      const step = (bar.clientWidth - 12) / 2 // largeur d'un onglet (padding 6px ×2)
-      const dx = e.clientX - startX
-      if (Math.abs(dx) > 4) moved = true
-      place(startFrac + dx / step)
-    }
-    function up() {
-      if (!active) return
-      active = false
-      const tabs = bar.querySelectorAll('.tab')
-      const target = moved
-        ? frac >= 0.5
-          ? 'history'
-          : 'list'
-        : downTab === tabs[1]
-          ? 'history'
-          : 'list'
-
-      ind.style.transition = ''
-      ind.style.transform = `translateX(${target === 'history' ? 100 : 0}%)`
-      if (target !== viewRef.current) setView(target)
-      const done = () => {
-        ind.style.transform = ''
-        ind.removeEventListener('transitionend', done)
-      }
-      ind.addEventListener('transitionend', done)
-    }
-
-    bar.addEventListener('pointerdown', down)
-    bar.addEventListener('pointermove', move)
-    bar.addEventListener('pointerup', up)
-    bar.addEventListener('pointercancel', up)
-    return () => {
-      bar.removeEventListener('pointerdown', down)
-      bar.removeEventListener('pointermove', move)
-      bar.removeEventListener('pointerup', up)
-      bar.removeEventListener('pointercancel', up)
-    }
-  }, [phase])
 
   // ---- Démarrage : session anonyme + membre ---------------------------------
   useEffect(() => {
@@ -485,29 +341,32 @@ export default function App() {
         settingsBtnRef={settingsBtnRef}
       />
 
-      <main className={'content' + (view === 'list' ? ' has-cta' : '')} key={view}>
-        {view === 'list' ? (
-          <ShoppingList
-            items={listItems}
-            now={now}
-            memberById={memberById}
-            onToggleBought={handleToggleBought}
-            onDelete={handleDelete}
-          />
-        ) : (
-          <History items={historyItems} memberById={memberById} />
-        )}
-      </main>
+      <div className="content-stack">
+        <main id="list-panel" role="tabpanel" aria-labelledby="list-tab"
+          className="content has-cta" data-active={view === 'list'} aria-hidden={view !== 'list'}
+          inert={view !== 'list' ? '' : undefined}>
+          <ShoppingList items={listItems} now={now} memberById={memberById}
+            onToggleBought={handleToggleBought} onDelete={handleDelete} active={view === 'list'} />
+        </main>
+        <main id="history-panel" role="tabpanel" aria-labelledby="history-tab"
+          className="content" data-active={view === 'history'} aria-hidden={view !== 'history'}
+          inert={view !== 'history' ? '' : undefined}>
+          <History items={historyItems} memberById={memberById} active={view === 'history'} />
+        </main>
+      </div>
 
       <div className="dock">
         <Meadow />
         <div className="dock-ground">
-          {view === 'list' && <AddBar onAdd={handleAdd} />}
+          <div className="add-slot" data-active={view === 'list'} inert={view !== 'list' ? '' : undefined} aria-hidden={view !== 'list'}>
+            <div className="add-slot-inner"><AddBar onAdd={handleAdd} /></div>
+          </div>
 
-          <nav className="tabbar" data-active={view} ref={tabbarRef}>
+          <nav className="tabbar" role="tablist" aria-label={t('tab_list') + ' / ' + t('tab_history')} data-active={view} ref={tabbarRef}>
             <span className="tab-indicator" aria-hidden="true" ref={indicatorRef} />
             <button
               type="button"
+              id="list-tab" role="tab" aria-selected={view === 'list'} aria-controls="list-panel"
               className={'tab' + (view === 'list' ? ' active' : '')}
               onClick={() => setView('list')}
             >
@@ -517,6 +376,7 @@ export default function App() {
             </button>
             <button
               type="button"
+              id="history-tab" role="tab" aria-selected={view === 'history'} aria-controls="history-panel"
               className={'tab' + (view === 'history' ? ' active' : '')}
               onClick={() => setView('history')}
             >
@@ -528,12 +388,9 @@ export default function App() {
       </div>
 
       {leaving && (
-        <BottomSheet onClose={() => setLeaving(false)}>
+        <BottomSheet className="confirm" onClose={() => setLeaving(false)}>
           {(close) => (
             <>
-              <span className="modal-emoji danger" aria-hidden="true">
-                <Icon name="logout" size={24} />
-              </span>
               <h2>{t('leave_title')}</h2>
               <p className="muted">{t('leave_body')}</p>
               <div className="modal-actions">
@@ -576,7 +433,7 @@ export default function App() {
         onLeave={() => setLeaving(true)}
       />
 
-      {toast && <div className={'toast ' + toast.kind}>{toast.msg}</div>}
+      {toast && <Toast key={toast.id} message={toast.msg} kind={toast.kind} onDismiss={() => setToast((current) => current?.id === toast.id ? null : current)} />}
     </div>
   )
 }

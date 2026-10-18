@@ -1,201 +1,204 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import Icon from './Icon'
-import LangToggle from './LangToggle'
 import { useLang } from '../lib/i18n'
-import { cycleTheme, useThemePref } from '../lib/theme'
+import { setThemePref, useEffectiveTheme } from '../lib/theme'
+import { EASE, EXIT_MS, useReducedMotion } from '../lib/motion'
+import {
+  animatePanelMotion, freezePanelMotion, usePanelDialog,
+} from './BottomSheet'
+import './PanelMotion.css'
 
-// Menu Réglages « morph » : le rond ⋯ de l'en-tête se métamorphose en un panneau
-// liquid-glass rectangulaire (et inversement au clic extérieur). On anime la
-// géométrie réelle (width/height/left/top/border-radius) du bouton vers le
-// panneau — pas un scale, pour ne pas déformer le contenu. La taille finale est
-// mesurée en JS. Courbes en LITTÉRAL : `var()` dans une transition posée en JS
-// ne se parse pas sur Safari mobile.
 const MARGIN = 10
-const SPRING = 'cubic-bezier(0.34, 1.15, 0.55, 1)' // rebond léger (overshoot réduit)
-const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
-const DUR = 0.3 // s
+const SPRING = 'cubic-bezier(0.34, 1.15, 0.55, 1)'
+const SURFACE_PROPERTIES = ['transform', 'opacity', 'borderRadius']
 
-function reduceMotion() {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-}
-
-function geomTransition(reduce) {
-  if (reduce) return 'none'
-  // Pas de transition de border-radius : il reste constant (= rayon du cercle),
-  // pour que l'arc haut-droit reste confondu avec le rond à tout instant.
-  // On anime aussi le flou (backdrop-filter) et l'ombre : l'état rond n'en a pas
-  // (= clone du bouton ⋯), le panneau si → l'échange final est invisible.
-  return (
-    `left ${DUR}s ${SPRING}, top ${DUR}s ${SPRING}, ` +
-    `width ${DUR}s ${SPRING}, height ${DUR}s ${SPRING}, ` +
-    `background-color ${DUR}s ${EASE}, border-color ${DUR}s ${EASE}, ` +
-    `box-shadow ${DUR}s ${EASE}, ` +
-    `-webkit-backdrop-filter ${DUR}s ${EASE}, backdrop-filter ${DUR}s ${EASE}`
-  )
-}
-
+// FLIP : le panneau et son contenu sont disposés à leur taille finale une
+// seule fois. Seule la surface de fond grandit depuis le bouton ⋯ ; les textes
+// et l'icône ne sont jamais mis à l'échelle. Le rayon compense le scale initial
+// pour partir d'un vrai cercle, puis retrouver exactement le rayon du design.
 export default function SettingsMenu({ open, onClose, onClosed, anchorRef, onLeave }) {
-  const { t } = useLang()
-  const themePref = useThemePref()
-  const [mounted, setMounted] = useState(false)
-  const [expanded, setExpanded] = useState(false) // pilote la classe .is-open (fondu du contenu)
+  const { t, lang, toggleLang } = useLang()
+  const theme = useEffectiveTheme()
+  const reduced = useReducedMotion()
+  const [mounted, setMounted] = useState(open)
+  const [viewportVersion, setViewportVersion] = useState(0)
   const morphRef = useRef(null)
+  const surfaceRef = useRef(null)
   const menuRef = useRef(null)
+  const geometryRef = useRef(null)
+  const callbacks = useRef({ onClose, onClosed, open })
+  callbacks.current = { onClose, onClosed, open }
 
-  // On monte dès l'ouverture, et on garde monté le temps de l'anim de fermeture.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (open) setMounted(true)
   }, [open])
 
+  // Le focus reste dans le dialogue jusqu'à sa disparition. Une autre feuille
+  // ouverte depuis celui-ci prend la priorité sur Échap et la restitution.
+  usePanelDialog(morphRef, mounted, () => {
+    if (callbacks.current.open) callbacks.current.onClose()
+  }, anchorRef)
+
+  useLayoutEffect(() => {
+    if (!mounted) return
+    const viewport = window.visualViewport
+    const update = () => setViewportVersion((version) => version + 1)
+    window.addEventListener('resize', update)
+    viewport?.addEventListener('resize', update)
+    viewport?.addEventListener('scroll', update)
+    return () => {
+      window.removeEventListener('resize', update)
+      viewport?.removeEventListener('resize', update)
+      viewport?.removeEventListener('scroll', update)
+    }
+  }, [mounted])
+
   useLayoutEffect(() => {
     const morph = morphRef.current
+    const surface = surfaceRef.current
     const menu = menuRef.current
-    const btn = anchorRef?.current
-    if (!mounted || !morph || !menu || !btn) return
+    if (!mounted || !morph || !surface || !menu) return
 
-    const reduce = reduceMotion()
-    const b = btn.getBoundingClientRect()
-    // Rayon constant = celui du bouton rond (moitié de sa taille). Un carré à ce
-    // rayon EST un cercle ; un rectangle au même rayon garde le coin haut-droit
-    // (qui reste ancré en (b.right, b.top)) identique au cercle tout du long.
+    const previous = geometryRef.current
+    const visual = previous ? surface.getBoundingClientRect() : null
+    freezePanelMotion(surface, SURFACE_PROPERTIES)
+    freezePanelMotion(menu, ['opacity'])
+
+    const viewport = window.visualViewport
+    const left = viewport?.offsetLeft || 0
+    const top = viewport?.offsetTop || 0
+    const width = viewport?.width || window.innerWidth
+    const bottom = top + (viewport?.height || window.innerHeight)
+    const b = anchorRef?.current?.getBoundingClientRect() || {
+      left: left + width - MARGIN - 44, right: left + width - MARGIN,
+      top: top + MARGIN, width: 44, height: 44,
+    }
     const radius = b.height / 2
+    const finalRight = Math.min(left + width - MARGIN, Math.max(left + MARGIN + b.width, b.right))
+    const finalLeft = Math.max(left + MARGIN, left + (left + width - finalRight))
+    const panelWidth = Math.max(b.width, finalRight - finalLeft)
+    const panelTop = Math.max(top + MARGIN, Math.min(b.top, bottom - MARGIN - b.height))
+    const availableHeight = Math.max(1, bottom - panelTop - MARGIN)
 
-    // Géométrie du bouton (état rond).
-    const setRound = () => {
-      morph.style.left = b.left + 'px'
-      morph.style.top = b.top + 'px'
-      morph.style.width = b.width + 'px'
-      morph.style.height = b.height + 'px'
-      morph.style.borderRadius = radius + 'px'
-      // Clone EXACT du bouton réglages de l'en-tête : transparent, SANS flou ni
-      // ombre. C'est ce qui rend l'échange final (morph → vrai bouton) invisible.
-      morph.style.backgroundColor = 'transparent'
-      morph.style.borderColor = 'transparent'
-      morph.style.boxShadow = 'none'
-      morph.style.backdropFilter = 'blur(0px) saturate(100%)'
-      morph.style.webkitBackdropFilter = 'blur(0px) saturate(100%)'
+    menu.style.width = panelWidth + 'px'
+    menu.style.height = 'auto'
+    menu.style.maxHeight = `max(1px, calc(${availableHeight}px - env(safe-area-inset-bottom, 0px)))`
+    const panelHeight = menu.offsetHeight
+    menu.style.height = panelHeight + 'px'
+    Object.assign(morph.style, {
+      left: finalRight - panelWidth + 'px', top: panelTop + 'px',
+      width: panelWidth + 'px', height: panelHeight + 'px', borderRadius: radius + 'px',
+    })
+
+    const roundScaleX = b.width / panelWidth
+    const roundScaleY = b.height / panelHeight
+    const roundTransform = `translate(${b.right - finalRight}px, ${b.top - panelTop}px) scale(${roundScaleX}, ${roundScaleY})`
+    const roundRadius = `${radius / roundScaleX}px / ${radius / roundScaleY}px`
+    if (visual) {
+      // Une inversion ou un redimensionnement repart du rectangle visible,
+      // même si le clavier ou Safari a changé la zone disponible entre-temps.
+      surface.style.transform = `translate(${visual.right - finalRight}px, ${visual.top - panelTop}px) scale(${visual.width / panelWidth}, ${visual.height / panelHeight})`
+    } else {
+      Object.assign(surface.style, { transform: roundTransform, borderRadius: roundRadius, opacity: '0' })
+      menu.style.opacity = '0'
     }
+    geometryRef.current = { width: panelWidth, height: panelHeight }
 
-    if (open) {
-      // Ancrage d'origine : le bord DROIT du panneau reste sous le bouton
-      // (b.right) → coin haut-droit confondu avec le cercle. Le bord GAUCHE est
-      // placé à la même distance du bord d'écran que le bord droit l'est du sien
-      // (marges latérales symétriques) → la largeur en découle.
-      const rightGap = window.innerWidth - b.right
-      const finalLeft = Math.max(MARGIN, rightGap)
-      const PW = b.right - finalLeft
-      menu.style.width = PW + 'px'
-      menu.style.height = 'auto'
-      const natural = menu.scrollHeight
-      const H = Math.min(natural, window.innerHeight - b.top - MARGIN)
-      menu.style.height = H + 'px'
+    const progress = visual ? Math.max(
+      Math.abs(visual.width - b.width) / Math.max(1, panelWidth - b.width),
+      Math.abs(visual.height - b.height) / Math.max(1, panelHeight - b.height)
+    ) : 0
+    const duration = (open ? 300 : EXIT_MS) * Math.min(1, Math.max(0, open ? 1 - progress : progress))
+    animatePanelMotion(menu, { opacity: open ? '1' : '0' }, {
+      duration: open ? Math.min(240, duration) : Math.min(160, duration),
+      delay: open && !previous ? 60 : 0, easing: EASE, reduced,
+    })
+    animatePanelMotion(surface, {
+      transform: open ? 'translate(0px, 0px) scale(1, 1)' : roundTransform,
+      borderRadius: open ? radius + 'px' : roundRadius,
+      opacity: open ? '1' : '0',
+    }, {
+      duration, easing: open ? SPRING : EASE, reduced,
+      onFinish: open ? undefined : () => {
+        if (callbacks.current.open) return
+        geometryRef.current = null
+        setMounted(false)
+        callbacks.current.onClosed?.()
+      },
+    })
 
-      const setPanel = () => {
-        morph.style.transition = geomTransition(reduce)
-        morph.style.left = finalLeft + 'px'
-        morph.style.top = b.top + 'px'
-        morph.style.width = PW + 'px'
-        morph.style.height = H + 'px'
-        // border-radius inchangé (radius) : coin haut-droit confondu avec le rond.
-        // Valeurs vidées → reprise des règles CSS du panneau (verre + flou + ombre).
-        morph.style.backgroundColor = '' // reprend var(--glass-dock) de la feuille
-        morph.style.borderColor = ''
-        morph.style.boxShadow = ''
-        morph.style.backdropFilter = ''
-        morph.style.webkitBackdropFilter = ''
-        setExpanded(true) // → .is-open : le contenu apparaît en fondu
-      }
-
-      // État initial = le rond, figé sans transition.
-      morph.style.transition = 'none'
-      setRound()
-      void morph.offsetWidth // reflow → base de la transition (rond + contenu masqué)
-
-      if (reduce) {
-        setPanel()
-        return
-      }
-      // Une frame en « rond » d'abord, puis on morph vers le panneau.
-      const raf = requestAnimationFrame(setPanel)
-      return () => cancelAnimationFrame(raf)
-    }
-
-    // Fermeture : on remétamorphose en rond, le contenu se masque (.is-open off).
-    setExpanded(false)
-    morph.style.transition = geomTransition(reduce)
-    setRound()
-
-    let done = false
-    const finish = (e) => {
-      if (e && e.propertyName && e.propertyName !== 'width') return
-      if (done) return
-      done = true
-      morph.removeEventListener('transitionend', finish)
-      setMounted(false)
-      onClosed?.() // morph entièrement résorbé → l'en-tête peut réafficher le ⋯
-    }
-    if (reduce) {
-      finish()
-      return
-    }
-    morph.addEventListener('transitionend', finish)
-    const safety = setTimeout(finish, DUR * 1000 + 150) // filet de sécurité
     return () => {
-      morph.removeEventListener('transitionend', finish)
-      clearTimeout(safety)
+      // Sauvegarder AVANT cancel : l'effet suivant pourra inverser le mouvement
+      // sans revenir au début ni laisser une ancienne sortie appeler onClosed.
+      freezePanelMotion(surface, SURFACE_PROPERTIES)
+      freezePanelMotion(menu, ['opacity'])
     }
-  }, [mounted, open, anchorRef])
-
-  // Échap ferme aussi.
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [mounted, open, anchorRef, reduced, lang, viewportVersion])
 
   if (!mounted) return null
 
   return (
     <>
-      {/* Capte le clic extérieur, sans voile de modale (on garde l'effet morph). */}
-      <div className={'morph-scrim' + (expanded ? ' is-open' : '')} onClick={onClose} />
+      <div className={'morph-scrim panel-morph-scrim' + (open ? ' is-open' : '')} onClick={() => open && onClose()} />
       <div
         ref={morphRef}
-        className={'morph' + (expanded ? ' is-open' : '')}
+        className={'morph panel-morph' + (open ? ' is-open' : '')}
         role="dialog"
         aria-modal="true"
         aria-label={t('settings_title')}
+        tabIndex={-1}
       >
+        <div ref={surfaceRef} className="morph panel-morph-surface" aria-hidden="true" />
         <span className="morph-icon" aria-hidden="true">
-          <Icon name="sliders" size={21} />
+          <Icon name="more" size={20} />
         </span>
-        <div ref={menuRef} className="morph-menu">
+        <div ref={menuRef} className="morph-menu" inert={open ? undefined : ''} aria-hidden={!open}>
           <div className="sheet-head">
             <h2>{t('settings_title')}</h2>
           </div>
           <div className="settings-list">
-            {/* Le bouton cloche change le thème (Auto → Jour → Crépuscule). Son
-                apparence sera revue plus tard ; les notifications sont en pause. */}
             <div className="settings-row">
-              <span className="settings-label">
-                {t('settings_theme')} · {t('theme_' + themePref)}
-              </span>
-              <button
-                type="button"
-                className="icon-btn bell"
-                onClick={cycleTheme}
-                aria-label={t('theme_change')}
-                title={t('theme_change')}
-              >
-                <Icon name="bell" size={20} />
-              </button>
+              <span className="settings-label">{t('settings_theme')}</span>
+              <div className="seg" role="group" aria-label={t('settings_theme')}>
+                <button
+                  type="button"
+                  className={'seg-btn' + (theme === 'light' ? ' active' : '')}
+                  aria-pressed={theme === 'light'}
+                  onClick={() => setThemePref('light')}
+                >
+                  <Icon name="sun" size={14} strokeWidth={2.2} />
+                  {t('theme_light_short')}
+                </button>
+                <button
+                  type="button"
+                  className={'seg-btn' + (theme === 'dark' ? ' active' : '')}
+                  aria-pressed={theme === 'dark'}
+                  onClick={() => setThemePref('dark')}
+                >
+                  <Icon name="moon" size={14} strokeWidth={2.2} />
+                  {t('theme_dark_short')}
+                </button>
+              </div>
             </div>
             <div className="settings-row">
               <span className="settings-label">{t('settings_language')}</span>
-              <LangToggle />
+              <div className="seg" role="group" aria-label={t('settings_language')}>
+                {[
+                  ['fr', 'FR', 'Français'],
+                  ['en', 'EN', 'English'],
+                ].map(([code, short, name]) => (
+                  <button
+                    key={code}
+                    type="button"
+                    className={'seg-btn narrow' + (lang === code ? ' active' : '')}
+                    aria-pressed={lang === code}
+                    aria-label={name}
+                    onClick={() => lang !== code && toggleLang()}
+                  >
+                    {short}
+                  </button>
+                ))}
+              </div>
             </div>
             <button
               type="button"

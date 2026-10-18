@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bienvenue au foyer — aperçu Grand ciel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light;--sky:#9ecfe4;--paper:#fdfbf5;--ground:#f2f0e6;--ink:#2a3a34;--muted:#5c6b62;--green:#3e7a46;--on-green:#fdfbf5;--field:#edefe4;--hill:#6fa04f;--hill-front:#3e7a46;--sun:#e8b23c;--stroke:rgba(42,58,52,.12);--shadow:0 16px 44px rgba(42,58,52,.1);--cloud:#fdfbf5;--flower:#b33a28}
+:root[data-theme=dark]{color-scheme:dark;--sky:#23375c;--paper:#243653;--ground:#1b2a44;--ink:#eee6d6;--muted:#a9b4c4;--green:#7fb07a;--on-green:#16233a;--field:#2c4162;--hill:#3f6b47;--hill-front:#2e5236;--sun:#f0c06a;--stroke:rgba(238,230,214,.16);--shadow:0 16px 44px rgba(8,14,26,.22);--cloud:#2e4670;--flower:#e8806b}
+*{box-sizing:border-box}body{margin:0;background:#dce4e0;color:var(--ink);font-family:'Zen Maru Gothic',sans-serif;-webkit-font-smoothing:antialiased}button,input{font:inherit}button{cursor:pointer;-webkit-tap-highlight-color:transparent}button:focus-visible,a:focus-visible{outline:3px solid var(--green);outline-offset:4px}button:disabled{opacity:.65;cursor:default}.reviewbar{display:flex;align-items:center;justify-content:space-between;gap:20px;max-width:1060px;margin:0 auto;padding:26px 30px;color:#2a3a34}.reviewbar strong{display:block;font-size:14px}.reviewbar small{color:#5c6b62;font-size:12px}.theme-switch{display:flex;background:#fdfbf5;border-radius:999px;padding:4px;gap:3px}.theme-switch button{border:0;background:none;border-radius:999px;padding:9px 16px;font-size:12px;color:#5c6b62}.theme-switch button[aria-pressed=true]{background:#3e7a46;color:#fdfbf5}main{display:grid;grid-template-columns:330px 394px;gap:100px;align-items:center;justify-content:center;min-height:calc(100vh - 100px);padding:15px 28px 55px}.notes .kicker{font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:#3e7a46}.notes h1{font-family:'Klee One',serif;font-size:48px;line-height:1.12;font-weight:600;margin:14px 0 22px;color:#2a3a34}.notes p{font-size:14px;line-height:1.8;color:#5c6b62}.notes a{display:inline-flex;align-items:center;gap:8px;margin-top:20px;font-size:13px;font-weight:700;color:#3e7a46;text-underline-offset:5px}.phone{position:relative;width:394px;min-height:820px;overflow:hidden;border-radius:40px;background:var(--ground);box-shadow:0 24px 80px rgba(38,61,57,.17),0 0 0 7px rgba(253,251,245,.45);isolation:isolate}.sky{position:absolute;inset:0 0 auto;height:330px;background:var(--sky);z-index:-1;overflow:hidden}.clouds{position:absolute;inset:0;width:100%;height:100%}.cloud-drift{animation:cloud-drift 75s linear infinite alternate}.day{display:initial}.night{display:none}[data-theme=dark] .day{display:none}[data-theme=dark] .night{display:initial}@keyframes cloud-drift{from{transform:translateX(-14px)}to{transform:translateX(24px)}}.topline{height:68px;display:flex;align-items:center;justify-content:space-between;padding:20px 25px 0}.wordmark{font-size:13px;font-weight:700;letter-spacing:.03em}.lang{border:0;background:var(--paper);color:var(--ink);display:flex;gap:7px;align-items:center;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(42,58,52,.06)}.flag{width:18px;height:18px;border-radius:50%;background:linear-gradient(90deg,#0055a4 33%,#fff 33%,#fff 66%,#ef4135 66%);overflow:hidden}.hero{text-align:center;padding:17px 24px 0}.basket{width:66px;height:60px;display:block;margin:0 auto 14px}.hero h2{font-family:'Klee One',serif;font-size:30px;font-weight:600;line-height:1.22;margin:0 0 12px;letter-spacing:-.035em}.hero p{font-size:14px;line-height:1.65;margin:0 auto;max-width:290px}.card{position:relative;margin:27px 22px 0;padding:8px 22px 24px;background:var(--paper);border-radius:28px;box-shadow:var(--shadow);z-index:2}.tabs{display:flex;margin:14px 0 21px;padding:4px;gap:4px;background:var(--field);border-radius:999px}.tabs button{position:relative;flex:1;padding:11px 6px;border:0;border-radius:999px;font-size:13px;font-weight:700;background:transparent;color:var(--muted);transition:color .2s,background .2s,box-shadow .2s}.tabs button[aria-selected=true]{background:var(--paper);color:var(--ink);box-shadow:0 2px 8px rgba(42,58,52,.09)}label{display:block;font-size:12px;font-weight:700;margin:0 0 8px}label .optional{font-size:11px;color:var(--muted);font-weight:400}.field{margin-bottom:17px}input{display:block;width:100%;border:1px solid transparent;background:var(--field);border-radius:16px;min-height:52px;padding:13px 15px;color:var(--ink);font-size:16px;outline:none;transition:box-shadow .2s,border-color .2s}input::placeholder{color:var(--muted);opacity:1}input:focus{border-color:var(--green);box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 15%,transparent)}.primary{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:53px;border:0;border-radius:999px;margin-top:23px;background:var(--green);color:var(--on-green);font-weight:700;font-size:14px;box-shadow:0 7px 16px rgba(62,122,70,.14);transition:transform .2s}.primary:active{transform:scale(.975)}.hint{font-size:11px;line-height:1.6;text-align:center;color:var(--muted);margin:14px 3px 0}.reassure{font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:7px;margin:21px 0 70px;position:relative;z-index:2}.meadow{position:absolute;bottom:-1px;left:0;width:100%;height:115px;z-index:0;pointer-events:none}.code{text-transform:uppercase;letter-spacing:.22em;text-align:center}.panel{animation:arrive .25s ease-out}@keyframes arrive{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}.toast{position:absolute;left:24px;right:24px;bottom:30px;border-radius:18px;background:var(--ink);color:var(--paper);padding:12px 16px;text-align:center;font-size:12px;z-index:8;box-shadow:var(--shadow)}[hidden]{display:none!important}@media(min-width:761px) and (max-height:960px){.phone{min-height:780px}.topline{height:57px}.hero{padding-top:8px}.basket{width:65px;height:61px;margin-bottom:11px}.hero h2{font-size:30px}.card{margin-top:23px}.reviewbar{padding-top:18px;padding-bottom:10px}main{padding-top:12px;gap:80px}}@media(max-width:760px){body{background:var(--ground)}.reviewbar{padding:12px 16px;color:var(--ink)}.reviewbar strong{font-size:11px}.reviewbar small{display:none}.theme-switch button{padding:7px 12px}main{display:block;min-height:0;padding:0}.notes{display:none}.phone{width:100%;max-width:430px;margin:auto;min-height:calc(100svh - 60px);border-radius:0;box-shadow:none}.topline{height:60px}.hero{padding-top:5px}.basket{width:65px;height:61px;margin-bottom:9px}.hero h2{font-size:30px}.card{margin-top:23px}.sky{height:305px}.reassure{margin-bottom:82px}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* Aperçu de l'écran seul, sans habillage de présentation. */
+body { background: var(--ground); }
+main { display: flex; justify-content: center; align-items: stretch; padding: 0; }
+.phone { width: 100%; max-width: 430px; border-radius: 0; box-shadow: none; }
+/* Cible iPhone : un écran fixe, composé pour la hauteur réellement disponible. */
+html, body { height: 100%; height: 100dvh; overflow: hidden; overscroll-behavior: none; }
+body { display: flex; flex-direction: column; }
+.reviewbar { flex: none; width: 100%; }
+main { flex: 1; min-height: 0; overflow: hidden; padding-bottom: 0; }
+.phone { height: 100%; min-height: 0; max-height: none; container-type: size; display: flex; flex-direction: column; }
+.topline, .hero, .card { flex: none; }
+.reassure { margin: 18px 0 0; }
+.meadow { height: 70px; }
+@media(max-width:760px) {
+  .reviewbar { height: calc(52px + env(safe-area-inset-top, 0px)); padding-top: calc(8px + env(safe-area-inset-top, 0px)); padding-bottom: 8px; }
+  main { flex: 1; min-height: 0; padding: 0; display: flex; }
+  .phone { flex: 1; height: 100%; min-height: 0; max-height: none; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+  .reassure { margin: 16px 0 0; }
+  .meadow { height: calc(55px + env(safe-area-inset-bottom, 0px)); }
+}
+@container (max-height: 760px) {
+  .topline { height: 48px; padding-top: 8px; }
+  .hero { padding-top: 4px; }
+  .basket { width: 55px; height: 51px; margin-bottom: 6px; }
+  .hero h2 { font-size: 28px; margin-bottom: 8px; }
+  .hero p { font-size: 13px; line-height: 1.5; }
+  .card { margin-top: 18px; padding-bottom: 18px; }
+  .tabs { margin-top: 10px; margin-bottom: 17px; }
+  .field { margin-bottom: 13px; }
+  .primary { margin-top: 18px; }
+  .hint { margin-top: 12px; }
+  .reassure { margin-top: 13px; }
+  .sky { height: 278px; }
+}
+@container (max-height: 660px) {
+  .topline { height: 43px; padding-top: 6px; }
+  .basket { width: 39px; height: 36px; margin-bottom: 4px; }
+  .hero h2 { font-size: 26px; line-height: 1.12; margin-bottom: 6px; }
+  .hero p { font-size: 12px; line-height: 1.4; }
+  .card { margin-top: 14px; padding: 5px 20px 15px; }
+  .tabs { margin-top: 9px; margin-bottom: 13px; }
+  .tabs button { padding: 9px 4px; }
+  label { margin-bottom: 6px; }
+  input { min-height: 46px; padding-top: 10px; padding-bottom: 10px; }
+  .field { margin-bottom: 12px; }
+  .primary { min-height: 48px; margin-top: 14px; }
+  .hint { margin-top: 10px; }
+  .reassure { margin-top: 11px; font-size: 10px; }
+  .sky { height: 240px; }
+  .meadow { height: 42px; }
+}
+@container (max-height: 560px) {
+  .topline { height: 36px; }
+  .basket { width: 28px; height: 26px; }
+  .hero h2 { font-size: 23px; }
+  .hero p { font-size: 11px; }
+  .card { margin-top: 9px; padding-top: 3px; padding-bottom: 11px; }
+  .tabs { margin-bottom: 10px; }
+  .tabs button { padding: 7px 4px; }
+  .field { margin-bottom: 8px; }
+  label { font-size: 11px; margin-bottom: 4px; }
+  input { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
+  .primary { min-height: 44px; margin-top: 10px; }
+  .hint { font-size: 10px; line-height: 1.4; margin-top: 8px; }
+  .reassure { margin-top: 8px; }
+  .sky { height: 204px; }
+  .meadow { height: 28px; }
+}
+
+</style>
+</head>
+<body>
+<main>
+<section class="phone" aria-label="Proposition de page de connexion">
+<div class="sky" aria-hidden="true"><svg class="clouds" viewBox="0 0 394 330" preserveAspectRatio="xMidYMid slice"><g class="day"><circle cx="70" cy="112" r="27" fill="#e8b23c" opacity=".8"/><g fill="#fff" opacity=".4" class="cloud-drift"><ellipse cx="315" cy="74" rx="74" ry="23"/><ellipse cx="367" cy="63" rx="46" ry="25"/><ellipse cx="20" cy="147" rx="65" ry="20"/></g><g stroke="#fdfbf5" stroke-width="1.8" fill="none" stroke-linecap="round"><path d="M291 123q5-6 10 0M312 109q4-5 8 0"/></g></g><g class="night"><path d="M70 83a24 24 0 1 0 29 31 20 20 0 0 1-29-31" fill="#f0c06a"/><g fill="#eee6d6"><circle cx="278" cy="55" r="1.5"/><circle cx="331" cy="118" r="1.8"/><circle cx="119" cy="38" r="1.2"/><circle cx="42" cy="186" r="1.3"/><path d="M240 116l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/></g></g><path d="M0 276c33-8 65-1 90 11 28-37 77-37 100-12 36-13 57-12 83 4 43-28 81-23 121-11v62H0z" fill="var(--cloud)"/><path d="M0 313c68-26 125 9 192-5 72-18 133 19 202-6v28H0z" fill="var(--ground)"/></svg></div>
+<div class="topline"><span class="wordmark">Courses du foyer</span><button type="button" class="lang" aria-label="Changer la langue"><span class="flag" aria-hidden="true"></span><span id="lang-label">FR</span></button></div>
+<div class="hero"><svg class="basket" viewBox="0 0 84 78" fill="none" aria-hidden="true"><ellipse cx="43" cy="71" rx="25" ry="4" fill="var(--ink)" opacity=".07"/><path d="M43 27l9-14c2-4 8-6 10-3s0 7-2 11L51 37" fill="#d48b52"/><path d="M53 13c-3-8 2-11 4-7 2-8 8-7 6-1 7-4 10 0 4 4" fill="#3e7a46"/><path d="M26 33c-1-13 3-22 8-24 3 5 5 16 1 29" fill="#6fa04f"/><path d="M31 33c7-14 12-16 16-14 0 8-6 16-13 20" fill="#3e7a46"/><path d="M21 37c-8-2-9-11-5-15 5-4 10-3 13 2 5-3 10 0 10 6 0 7-7 12-18 7" fill="#b33a28"/><path d="M20 22c-2-6 0-9 2-10" stroke="#3e7a46" stroke-width="2.5" stroke-linecap="round"/><path d="M13 34h58l-7 31a6 6 0 0 1-6 5H26a6 6 0 0 1-6-5z" fill="var(--paper)"/><path d="M13 34h58l-7 31a6 6 0 0 1-6 5H26a6 6 0 0 1-6-5z" stroke="var(--green)" stroke-width="2.5"/><path d="M27 39l8-17M57 39l-8-17" stroke="var(--green)" stroke-width="3.5" stroke-linecap="round"/><path d="M30 48v12M42 48v12M54 48v12" stroke="var(--green)" stroke-width="2" stroke-linecap="round" opacity=".45"/></svg><h2 data-copy="title">Les courses,<br>en bonne compagnie.</h2><p data-copy="intro">Ce qui manque à la maison,<br>sur une seule et même liste.</p></div>
+<div class="card"><div class="tabs" role="tablist" aria-label="Accès au foyer"><button role="tab" type="button" id="join-tab" aria-selected="false" aria-controls="form-panel" data-tab="join" data-copy="joinTab">Rejoindre</button><button role="tab" type="button" id="create-tab" aria-selected="true" aria-controls="form-panel" data-tab="create" data-copy="createTab">Créer un foyer</button></div>
+<form id="form-panel" class="panel" role="tabpanel" aria-labelledby="create-tab"><div class="field"><label for="first-name" data-copy="firstLabel">Ton prénom</label><input id="first-name" autocomplete="given-name" placeholder="Ex. Camille" maxlength="40" required></div><div class="field"><label for="home" id="home-label">Nom du foyer <span class="optional">(facultatif)</span></label><input id="home" autocomplete="off" placeholder="Ex. À la maison" maxlength="40"></div><button type="submit" class="primary"><span id="cta-text">Créer mon foyer</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button><p class="hint" id="hint">Un petit code à partager,<br>et toute la maison te rejoint.</p></form></div>
+<svg class="meadow" viewBox="0 0 394 115" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><path d="M0 54C75 22 135 70 221 48c67-18 115-14 173 3v64H0z" fill="var(--hill)"/><path d="M0 82c89-20 152 9 225-3 78-13 120-6 169 8v28H0z" fill="var(--hill-front)"/><g fill="var(--flower)"><circle cx="34" cy="67" r="3"/><circle cx="274" cy="56" r="3.5"/><circle cx="356" cy="76" r="3"/></g><g fill="var(--sun)"><circle cx="84" cy="64" r="2.5"/><circle cx="313" cy="66" r="2.5"/></g><g fill="#fdfbf5"><circle cx="135" cy="77" r="2.7"/><circle cx="220" cy="64" r="2.6"/></g></svg>
+<div class="toast" role="status" hidden></div>
+</section></main>
+<script>
+const copy={fr:{title:'Les courses,<br>en bonne compagnie.',intro:'Ce qui manque à la maison,<br>sur une seule et même liste.',createTab:'Créer un foyer',joinTab:'Rejoindre',firstLabel:'Ton prénom',reassure:'Juste un prénom. Aucun mot de passe.',createLabel:'Nom du foyer <span class="optional">(facultatif)</span>',joinLabel:'Code du foyer',createCta:'Créer mon foyer',joinCta:'Rejoindre le foyer',createHint:'Un petit code à partager,<br>et toute la maison te rejoint.',joinHint:'Demande le code à une personne<br>déjà dans le foyer.',createPh:'Ex. À la maison',joinPh:'Ex. K7M2QP',demo:'Ceci est un aperçu : aucun foyer n’a été créé.'},en:{title:'Shopping feels<br>better together.',intro:'Everything your home needs,<br>on one shared list.',createTab:'Create a home',joinTab:'Join a home',firstLabel:'Your first name',reassure:'Just a first name. No password.',createLabel:'Home name <span class="optional">(optional)</span>',joinLabel:'Home code',createCta:'Create my home',joinCta:'Join the home',createHint:'Share a little code,<br>and everyone is welcome.',joinHint:'Ask someone already in the home<br>for their invitation code.',createPh:'E.g. Our place',joinPh:'E.g. K7M2QP',demo:'This is a preview: no home has been created.'}};
+const systemTheme=matchMedia('(prefers-color-scheme: dark)');
+function syncTheme(){document.documentElement.dataset.theme=systemTheme.matches?'dark':'light';}
+syncTheme();systemTheme.addEventListener('change',syncTheme);
+let lang='fr',mode='join',toastTimer;const field=document.querySelector('#home');const fields={create:'',join:''};
+function render(){const c=copy[lang];document.documentElement.lang=lang;document.querySelectorAll('[data-copy]').forEach(e=>e.innerHTML=c[e.dataset.copy]);document.querySelector('#home-label').innerHTML=c[mode+'Label'];document.querySelector('#cta-text').textContent=c[mode+'Cta'];document.querySelector('#hint').innerHTML=c[mode+'Hint'];field.placeholder=c[mode+'Ph'];field.maxLength=mode==='create'?40:6;field.required=mode==='join';field.classList.toggle('code',mode==='join');document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===mode)));document.querySelector('#form-panel').setAttribute('aria-labelledby',mode+'-tab');document.querySelector('#lang-label').textContent=lang.toUpperCase();document.querySelector('.flag').style.background=lang==='fr'?'':'#012169';document.querySelector('.flag').textContent=lang==='fr'?'':'🇬🇧';}
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{fields[mode]=field.value;mode=b.dataset.tab;field.value=fields[mode];render();const panel=document.querySelector('.panel');if(!matchMedia('(prefers-reduced-motion: reduce)').matches)panel.animate([{opacity:.4,transform:'translateY(4px)'},{opacity:1,transform:'translateY(0)'}],{duration:220,easing:'ease-out'});}));
+field.addEventListener('input',()=>{if(mode==='join')field.value=field.value.toUpperCase();});
+document.querySelector('.lang').addEventListener('click',()=>{lang=lang==='fr'?'en':'fr';render();});
+document.querySelector('form').addEventListener('submit',e=>{e.preventDefault();const toast=document.querySelector('.toast');toast.textContent=copy[lang].demo;toast.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.hidden=true,3500);});
+document.querySelectorAll('[role=tab]').forEach(b=>b.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();const next=document.querySelector('[data-tab="'+(mode==='create'?'join':'create')+'"]');next.click();next.focus();}}));
+render();
+</script>
+</body></html>

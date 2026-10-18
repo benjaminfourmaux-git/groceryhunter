@@ -34,13 +34,16 @@
 
   --hairline: rgba(42, 58, 52, 0.1);
   --hairline-2: rgba(42, 58, 52, 0.16);
-  --scrim: rgba(32, 48, 40, 0.45);
+  --scrim: rgba(28, 42, 36, 0.45);
 
   --shadow-card: 0 6px 16px rgba(42, 58, 52, 0.08);
   --shadow-field: 0 4px 12px rgba(42, 58, 52, 0.1);
   --shadow-pop: 0 6px 18px rgba(42, 58, 52, 0.12);
   --shadow-glow: 0 8px 18px rgba(62, 122, 70, 0.4);
   --shadow-sheet: 0 -18px 46px rgba(42, 58, 52, 0.22);
+  --shadow-panel: 0 18px 44px rgba(42, 58, 52, 0.2);
+  --shadow-seg: 0 2px 8px rgba(42, 58, 52, 0.1);
+  --danger-soft: #f7e6e2; /* fond du bouton « Quitter le foyer » */
 
   /* Anciens noms, conservés pour les écrans secondaires (accueil, réglages,
      erreurs) : ils pointent sur la palette « Grand ciel ». */
@@ -141,6 +144,9 @@
     --shadow-pop: 0 6px 18px rgba(8, 14, 26, 0.4);
     --shadow-glow: 0 8px 18px rgba(127, 176, 122, 0.3);
     --shadow-sheet: 0 -18px 46px rgba(8, 14, 26, 0.5);
+    --shadow-panel: 0 18px 44px rgba(8, 14, 26, 0.45);
+    --shadow-seg: 0 2px 8px rgba(8, 14, 26, 0.3);
+    --danger-soft: rgba(232, 128, 107, 0.16);
     --brand-glow: rgba(127, 176, 122, 0.3);
     color-scheme: dark;
     /* Bascules du décor et de quelques composants (sans media query). */
@@ -183,6 +189,9 @@
   --shadow-pop: 0 6px 18px rgba(8, 14, 26, 0.4);
   --shadow-glow: 0 8px 18px rgba(127, 176, 122, 0.3);
   --shadow-sheet: 0 -18px 46px rgba(8, 14, 26, 0.5);
+--shadow-panel: 0 18px 44px rgba(8, 14, 26, 0.45);
+--shadow-seg: 0 2px 8px rgba(8, 14, 26, 0.3);
+--danger-soft: rgba(232, 128, 107, 0.16);
   --brand-glow: rgba(127, 176, 122, 0.3);
   color-scheme: dark;
   /* Bascules du décor et de quelques composants (sans media query). */
@@ -330,15 +339,15 @@ h2 {
 }
 /* Les nuages du fond traversent le ciel très lentement (120 s). */
 .sky-drift {
-  animation: sky-drift 120s linear infinite;
+  animation: sky-drift 120s ease-in-out infinite alternate;
   animation-delay: -38s;
 }
 @keyframes sky-drift {
   from {
-    transform: translateX(150px);
+    transform: translateX(16px);
   }
   to {
-    transform: translateX(-380px);
+    transform: translateX(-28px);
   }
 }
 
@@ -385,7 +394,7 @@ h2 {
   transition: transform 0.18s var(--spring), background 0.2s var(--ease);
 }
 .code-chip:active {
-  transform: scale(0.95);
+  transform: scale(0.97);
 }
 
 /* ---------- Avatars ---------- */
@@ -417,7 +426,7 @@ h2 {
   transition: transform 0.18s var(--spring), background 0.2s var(--ease);
 }
 .icon-btn:active {
-  transform: scale(0.9);
+  transform: scale(0.97);
 }
 .icon-btn.bell {
   background: var(--glass-2);
@@ -468,7 +477,7 @@ h2 {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain; /* le défilement reste contenu, pas de rebond noir */
   padding-bottom: calc(var(--safe-bottom) + 150px);
-  animation: view-in 0.32s var(--ease);
+
 }
 /* En vue Liste, on réserve aussi la place de la barre d'ajout. */
 .content.has-cta {
@@ -497,11 +506,10 @@ h2 {
   gap: 8px;
   /* `backwards` (et non `both`) : une fois l'entrée jouée, l'animation ne fige
      plus `transform`, qui sert au soulèvement au-dessus du clavier. */
-  animation: cta-in 0.4s var(--spring) backwards;
+
   transform: translateY(calc(-1 * var(--kb-lift, 0px)));
   /* Courbe proche de celle du clavier iOS. */
-  transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1);
-  will-change: transform;
+  transition: transform var(--kb-duration, 280ms) cubic-bezier(0.32, 0.72, 0, 1);
 }
 @keyframes cta-in {
   from {
@@ -562,7 +570,7 @@ h2 {
   box-shadow: none;
 }
 .add-btn:active:not(:disabled) {
-  transform: scale(0.88) rotate(-6deg);
+  transform: scale(0.97);
 }
 
 /* ---------- Articles ---------- */
@@ -573,6 +581,8 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* Un rangement ne doit pas faire suivre une carte par le scroll de Safari. */
+  overflow-anchor: none;
 }
 .item {
   display: flex;
@@ -596,7 +606,7 @@ h2 {
   }
 }
 .item:active {
-  transform: scale(0.985);
+  transform: none;
 }
 .item-main {
   flex: 1;
@@ -636,6 +646,7 @@ h2 {
 
 /* Séparateur « En partance » avant les articles cochés. */
 .list-sep {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -644,7 +655,11 @@ h2 {
   font-weight: 700;
   letter-spacing: 0.1em;
   color: var(--encre-2);
-  animation: item-in 0.42s var(--spring) both;
+  animation: section-in 0.2s var(--ease) both;
+}
+@keyframes section-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .list-sep::after {
   content: '';
@@ -692,11 +707,11 @@ h2 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: width 0.22s var(--spring), height 0.22s var(--spring), background 0.22s var(--spring),
-    border-color 0.22s var(--ease), transform 0.18s var(--spring);
+  transition: width 0.16s var(--ease), height 0.16s var(--ease), background 0.16s var(--ease),
+    border-color 0.16s var(--ease), transform 0.12s var(--ease);
 }
 .buy-check.pressed .buy-dot {
-  transform: scale(0.85);
+  transform: scale(0.92);
 }
 .buy-check.bought .buy-dot {
   width: 24px;
@@ -704,21 +719,13 @@ h2 {
   background: var(--coquelicot);
   border-color: var(--coquelicot);
 }
-.buy-check.bought .buy-dot svg {
-  animation: check-pop 0.3s var(--spring) both;
+.buy-tick path {
+  stroke-dasharray: 1;
+  animation: check-draw 0.2s var(--ease) both;
 }
-@keyframes check-pop {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(1.25);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+@keyframes check-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
 }
 .buy-ring {
   position: absolute;
@@ -742,27 +749,37 @@ h2 {
   stroke-linecap: round;
   transition: stroke-dashoffset 1s linear; /* lisse le vidage entre les ticks d'1 s */
 }
-/* Un pétale de coquelicot tombe quand on coche. */
-.petal {
+/* Une éclosion discrète autour de la case, entièrement dans la carte. */
+.petal-bloom {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.petal-bloom i {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 9px;
-  height: 12px;
-  margin: -6px 0 0 -4px;
+  width: 5px;
+  height: 8px;
+  margin: -4px 0 0 -2.5px;
   border-radius: 60% 60% 60% 10%;
   background: var(--coquelicot);
-  pointer-events: none;
-  animation: petal-fall 1.1s cubic-bezier(0.3, 0.5, 0.5, 1) forwards;
+  animation: petal-open 0.42s var(--ease) both;
 }
-@keyframes petal-fall {
-  0% {
-    opacity: 0.95;
-    transform: translate(0, 0) rotate(0deg);
-  }
-  100% {
+.petal-bloom i:nth-child(1) { --petal-angle: -36deg; }
+.petal-bloom i:nth-child(2) { --petal-angle: 0deg; }
+.petal-bloom i:nth-child(3) { --petal-angle: 36deg; }
+@keyframes petal-open {
+  from {
     opacity: 0;
-    transform: translate(-22px, 46px) rotate(140deg);
+    transform: rotate(var(--petal-angle)) translateY(-11px) scale(0.3);
+  }
+  25% {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 0;
+    transform: rotate(var(--petal-angle)) translateY(-23px) scale(1);
   }
 }
 .qty-badge {
@@ -790,6 +807,12 @@ h2 {
 }
 .swipe-row.bought {
   box-shadow: none;
+}
+.swipe-row[data-arrived] {
+  animation: none;
+}
+.swipe-row[data-sorting] {
+  z-index: 1;
 }
 .swipe-bg {
   position: absolute;
@@ -826,7 +849,6 @@ h2 {
   animation: none; /* l'entrée est portée par .swipe-row */
   touch-action: pan-y; /* swipe horizontal capté, scroll vertical natif */
   transition: transform 0.32s var(--spring), background 0.25s var(--ease);
-  will-change: transform;
   -webkit-user-select: none; /* glisser ne sélectionne pas le texte */
   user-select: none;
 }
@@ -844,6 +866,7 @@ h2 {
 
 /* ---------- Historique (corbeille récente) ---------- */
 .hist-list {
+  overflow-anchor: none;
   list-style: none;
   margin: 0;
   padding: 16px;
@@ -1351,13 +1374,48 @@ h2 {
   display: flex;
   gap: var(--space-3);
 }
+/* Feuille de confirmation (Quitter le foyer) : alignée à gauche, deux pilules. */
+.modal.confirm {
+  text-align: left;
+}
+.modal.confirm h2 {
+  font-size: var(--fs-2xl);
+  margin-bottom: 8px;
+}
+.modal.confirm p {
+  max-width: none;
+  margin: 0 0 20px;
+  font-size: var(--fs-base);
+  line-height: 1.55;
+}
+.modal.confirm .modal-actions {
+  gap: 10px;
+}
+.modal.confirm .btn-ghost,
+.modal.confirm .btn-danger {
+  height: 52px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--pill);
+  font-size: var(--fs-md);
+  font-weight: 700;
+}
+.modal.confirm .btn-ghost {
+  background: var(--fond);
+  color: var(--encre);
+}
+.modal.confirm .btn-danger {
+  background: var(--coquelicot);
+  color: var(--on-accent);
+  box-shadow: 0 8px 18px rgba(179, 58, 40, 0.34);
+}
 .modal-actions .btn-ghost,
 .modal-actions .btn-primary,
 .modal-actions .btn-danger {
   flex: 1;
 }
 
-/* ---------- Sheet de réglages ---------- */
+/* ---------- Réglages (maquette « Grand ciel — réglages ») ---------- */
 .settings-list {
   display: flex;
   flex-direction: column;
@@ -1370,30 +1428,69 @@ h2 {
   justify-content: space-between;
   gap: var(--space-3);
   width: 100%;
-  padding: var(--space-3) var(--space-4);
-  background: var(--glass);
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius-btn);
-  color: var(--text);
+  padding: 10px 10px 10px 16px;
+  background: var(--fond);
+  border: none;
+  border-radius: 16px;
+  color: var(--encre);
   text-align: left;
 }
 .settings-label {
-  font-size: var(--fs-base);
-  font-weight: 700;
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-md);
+  font-weight: 500;
 }
 button.settings-row {
   cursor: pointer;
-  transition: transform 0.18s var(--spring), background 0.2s var(--ease);
+  transition: transform 0.18s var(--spring), filter 0.2s var(--ease);
 }
 button.settings-row:active {
-  transform: scale(0.985);
-  background: var(--glass-2);
+  transform: none;
 }
 .settings-row.danger {
-  color: var(--danger);
+  padding: 16px;
+  background: var(--danger-soft);
+  color: var(--coquelicot);
 }
 .settings-row.danger .settings-label {
-  color: var(--danger);
+  font-weight: 700;
+  color: var(--coquelicot);
+}
+
+/* Sélecteur à pilules (Clair / Soir, FR / EN). */
+.seg {
+  flex: none;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--nuage);
+  border-radius: var(--pill);
+  box-shadow: var(--shadow-seg);
+}
+.seg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 76px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: var(--pill);
+  background: transparent;
+  color: var(--encre-2);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.25s var(--ease), color 0.25s var(--ease);
+}
+.seg-btn.narrow {
+  width: 44px;
+}
+.seg-btn.active {
+  background: var(--prairie);
+  color: var(--on-accent);
 }
 /* Le toggle langue porte son propre backdrop-filter. Dans la
    feuille, il se retrouve DANS le backdrop-filter de la modale → flou
@@ -1421,37 +1518,39 @@ button.settings-row:active {
   transition: background 0.3s var(--ease),
     -webkit-backdrop-filter 0.3s var(--ease), backdrop-filter 0.3s var(--ease);
 }
+/* Pas de voile : la liste reste visible derrière le panneau. */
 .morph-scrim.is-open {
-  background: rgba(20, 32, 12, 0.06);
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
+  background: transparent;
 }
 .morph {
   position: fixed;
   z-index: 41;
   overflow: hidden;
-  background: var(--glass-dock);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(180%);
-  backdrop-filter: blur(var(--blur)) saturate(180%);
-  border: 1px solid var(--hairline-2);
-  box-shadow: var(--shadow-pop);
-  color: var(--text);
+  background: var(--nuage);
+  border: none;
+  box-shadow: var(--shadow-panel);
+  color: var(--encre);
   text-align: left;
   will-change: width, height, left, top;
 }
-/* Icône ⋯ (état rond) : croisée en fondu avec le menu. */
+/* Icône ⋯ : c'est le bouton de l'en-tête ; elle reste en haut à droite du
+   panneau ouvert, en encre douce. */
 .morph-icon {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  transition: opacity 0.16s var(--ease);
+  color: var(--encre);
+  pointer-events: none;
+  transition: color 0.24s var(--ease);
 }
 .morph.is-open .morph-icon {
-  opacity: 0;
-  pointer-events: none;
+  color: var(--encre-2);
 }
 /* Menu : épinglé en haut-droite (le coin ancré), taille finale fixée en JS, donc
    pas de reflow pendant que le rond grandit — il est juste dévoilé. */
@@ -1460,7 +1559,7 @@ button.settings-row:active {
   top: 0;
   right: 0;
   box-sizing: border-box;
-  padding: 12px 14px 14px;
+  padding: 18px 16px 16px;
   opacity: 0;
   pointer-events: none;
   overflow-y: auto;
@@ -1471,10 +1570,13 @@ button.settings-row:active {
   pointer-events: auto;
 }
 .morph .sheet-head h2 {
-  font-size: var(--fs-xl);
+  margin: 0;
+  padding-right: 44px;
+  font-size: var(--fs-2xl);
+  line-height: 1.1;
 }
 .morph .settings-list {
-  margin: 10px 0 0;
+  margin: 14px 0 0;
 }
 
 /* Variante : feuille « J'ai fait les courses » avec liste cochable. */
@@ -1521,7 +1623,7 @@ button.settings-row:active {
   transition: transform 0.18s var(--spring);
 }
 .btn-pill:active {
-  transform: scale(0.95);
+  transform: scale(0.97);
 }
 .sheet-head p {
   margin: 0;
@@ -1653,7 +1755,7 @@ button.settings-row:active {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--safe-bottom) + 104px);
+  bottom: max(calc(var(--safe-bottom) + 104px), calc(var(--keyboard-height, 0px) + 12px));
   transform: translateX(-50%);
   max-width: 88%;
   background: var(--glass-dock);
@@ -1667,7 +1769,7 @@ button.settings-row:active {
   font-weight: 600;
   box-shadow: inset 0 1px 0 var(--specular), var(--shadow-pop);
   z-index: 50;
-  animation: toast-in 0.36s var(--spring);
+  animation: toast-in 0.2s var(--ease) backwards;
 }
 .toast.success {
   border-color: rgba(47, 158, 68, 0.45);
@@ -1688,19 +1790,57 @@ button.settings-row:active {
   }
 }
 
-/* Bascule de langue : fondu enchaîné fluide des seuls mots qui changent. */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 0.42s;
+/* Le thème change toute la palette ; la langue anime seulement ses textes. */
+.theme-transition::view-transition-old(root),
+.theme-transition::view-transition-new(root) {
+  animation-duration: 180ms;
   animation-timing-function: var(--ease);
 }
+::view-transition-group(root) { pointer-events: none; }
+[data-motion-paused] .sky-drift { animation-play-state: paused; }
+
+/* Deux surfaces conservées : leur propre scroll et leurs lignes survivent au changement d'onglet. */
+.content-stack { position: relative; flex: 1; min-height: 0; }
+.content-stack > .content {
+  position: absolute;
+  inset: 0;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity 180ms var(--ease), transform 220ms var(--ease), visibility 0s;
+}
+.content-stack > .content[data-active='false'] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(8px);
+  transition: opacity 150ms var(--ease), transform 220ms var(--ease), visibility 0s 180ms;
+}
+.add-slot { display: grid; grid-template-rows: 1fr; opacity: 1; margin-bottom: 0; transition: grid-template-rows 220ms var(--ease), opacity 150ms var(--ease), margin-bottom 220ms var(--ease), visibility 0s; }
+.add-slot-inner { min-height: 0; }
+.add-slot[data-active='false'] { grid-template-rows: 0fr; opacity: 0; margin-bottom: -12px; pointer-events: none; visibility: hidden; transition: grid-template-rows 220ms var(--ease), opacity 150ms var(--ease), margin-bottom 220ms var(--ease), visibility 0s 150ms; }
+.add-slot[data-active='false'] > .add-slot-inner { overflow: hidden; }
+button[data-pressing]:not(.buy-check) { transform: scale(0.97); }
+button:not(.buy-check):not(.tab) { transition-timing-function: var(--ease); }
+[data-exiting] { pointer-events: none; }
+.toast.is-closing { animation: toast-out 180ms var(--ease) both; }
+@keyframes toast-out { to { opacity: 0; transform: translate(-50%, 5px); } }
 
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button[data-pressing]:not(.buy-check), .icon-btn:active, .code-chip:active,
+  .add-btn:active:not(:disabled), .btn-primary:active:not(:disabled), .btn-ghost:active,
+  .btn-danger:active, .btn-pill:active { transform: none; }
+  .sky-drift { animation: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }

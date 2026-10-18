@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Liste de courses commune et synchronisée pour un foyer (PWA + Supabase).",
   "scripts": {
+    "test": "node --test src/lib/*.test.js",
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview --host"
