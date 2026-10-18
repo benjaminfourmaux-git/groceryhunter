@@ -5,45 +5,52 @@ import { useLang } from '../lib/i18n'
 import { iosFocusHandlers } from '../lib/iosFocus'
 import './Onboarding.css'
 
-function Sky() {
+// Décor « Grand ciel — connexion » : le ciel remplit l'écran (oiseaux le jour,
+// lune et étoiles le soir), des nuages posés sur l'horizon, la prairie en bas.
+function Scenery() {
   return (
-    <div className="onboarding-sky" aria-hidden="true">
-      <svg viewBox="0 0 394 330" preserveAspectRatio="xMidYMax slice" focusable="false">
-        <g className="onboarding-day">
-          <circle cx="34" cy="200" r="24" fill="var(--soleil)" opacity=".8" />
-          <g fill="var(--nuage-ciel)" opacity=".4">
-            <ellipse cx="315" cy="74" rx="74" ry="23" />
-            <ellipse cx="367" cy="63" rx="46" ry="25" />
-            <ellipse cx="20" cy="147" rx="65" ry="20" />
-          </g>
-          <path d="M291 123q5-6 10 0M312 109q4-5 8 0" stroke="var(--nuage-ciel)" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+    <div className="onboarding-scenery" aria-hidden="true">
+      <svg className="onboarding-birds" viewBox="0 0 390 60" fill="none" focusable="false">
+        <g className="onboarding-day" stroke="#FDFBF5" strokeWidth="1.8" strokeLinecap="round">
+          <path d="M44 24c3.5-3.5 6-3.5 9.5 0" />
+          <path d="M70 14c3.5-3.5 6-3.5 9.5 0" />
+          <path d="M28 40c2.8-2.8 4.8-2.8 7.6 0" />
         </g>
-        <g className="onboarding-night">
-          <path d="M30 176a24 24 0 1 0 29 31 20 20 0 0 1-29-31" fill="var(--soleil)" />
-          <g fill="var(--encre)">
-            <circle cx="278" cy="55" r="1.5" /><circle cx="331" cy="118" r="1.8" />
-            <circle cx="119" cy="38" r="1.2" /><circle cx="42" cy="186" r="1.3" />
-            <path d="M240 116l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" />
-          </g>
+        <g className="onboarding-night" fill="var(--encre)">
+          <circle cx="40" cy="20" r="1.4" /><circle cx="96" cy="38" r="1.1" />
+          <circle cx="300" cy="14" r="1.2" /><circle cx="352" cy="44" r="1.5" />
         </g>
-        <path d="M0 276c33-8 65-1 90 11 28-37 77-37 100-12 36-13 57-12 83 4 43-28 81-23 121-11v62H0z" fill="var(--nuage-ciel)" />
-        <path d="M0 313c68-26 125 9 192-5 72-18 133 19 202-6v28H0z" fill="var(--fond)" />
+      </svg>
+      <svg className="onboarding-clouds" viewBox="0 0 390 110" fill="none" focusable="false">
+        <circle className="onboarding-night" cx="300" cy="26" r="16" fill="var(--soleil)" />
+        <g fill="var(--nuage-ciel)">
+          <ellipse cx="78" cy="64" rx="84" ry="38" />
+          <ellipse cx="164" cy="82" rx="58" ry="26" />
+          <ellipse cx="318" cy="56" rx="76" ry="34" />
+          <ellipse cx="374" cy="80" rx="52" ry="24" />
+        </g>
+      </svg>
+      <svg className="onboarding-meadow" viewBox="0 0 390 130" fill="none" preserveAspectRatio="xMidYMax slice" focusable="false">
+        <path d="M0 38C70 18 150 48 228 32c54-11 110-15 162-6v106H0V38Z" fill="var(--colline)" />
+        <path d="M0 70C92 50 170 78 260 62c48-8 92-8 130-2v70H0V70Z" fill="var(--colline-2)" />
+        <circle cx="40" cy="54" r="4" fill="#D6513C" />
+        <circle cx="92" cy="66" r="3" fill="#E8B23C" />
+        <circle cx="148" cy="74" r="3.4" fill="#FDFBF5" />
+        <circle cx="216" cy="48" r="4" fill="#D6513C" />
+        <circle cx="282" cy="60" r="3" fill="#E8B23C" />
+        <circle cx="340" cy="50" r="3.4" fill="#FDFBF5" />
+        <circle cx="186" cy="100" r="3" fill="#E8B23C" />
       </svg>
     </div>
   )
 }
 
-function Meadow() {
-  return (
-    <svg className="onboarding-meadow" viewBox="0 0 394 115" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
-      <path d="M0 54C75 22 135 70 221 48c67-18 115-14 173 3v64H0z" fill="var(--colline)" />
-      <path d="M0 82c89-20 152 9 225-3 78-13 120-6 169 8v28H0z" fill="var(--colline-2)" />
-      <g fill="var(--coquelicot)"><circle cx="34" cy="67" r="3" /><circle cx="274" cy="56" r="3.5" /><circle cx="356" cy="76" r="3" /></g>
-      <g fill="var(--soleil)"><circle cx="84" cy="64" r="2.5" /><circle cx="313" cy="66" r="2.5" /></g>
-      <g fill="var(--on-accent)"><circle cx="135" cy="77" r="2.7" /><circle cx="220" cy="64" r="2.6" /></g>
-    </svg>
-  )
-}
+// Les trois étapes, sous la carte (recouvertes par le clavier quand il s'ouvre).
+const STEPS = [
+  ['add', 'step_add', <path key="p" d="M12 5v14M5 12h14" />, 2.4],
+  ['check', 'step_check', <path key="p" d="M20 6 9 17l-5-5" />, 2.8],
+  ['share', 'step_share', <><path d="M17 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9.5" cy="7" r="3.5" /><path d="M22 20v-2a4 4 0 0 0-3-3.9" /></>, 2.2],
+]
 
 export default function Onboarding({ onCreate, onJoin }) {
   const { t } = useLang()
@@ -147,20 +154,17 @@ export default function Onboarding({ onCreate, onJoin }) {
 
   return (
     <main className="onboarding-screen" ref={screenRef} aria-label={t('app_name')}>
-      <Sky />
-      <div className="onboarding-topline">
-        <span className="onboarding-wordmark">{t('onboarding_wordmark')}</span>
-        <div className="onboarding-language">
-          <LangToggle />
-        </div>
-      </div>
+      <Scenery />
 
       <div className="onboarding-scroll" ref={scrollRef}>
-        <header className="onboarding-hero">
-          <p>{t('onboarding_intro')}</p>
-        </header>
+        <section className="onboarding-card">
+          <div className="onboarding-language">
+            <LangToggle compact />
+          </div>
+          <img className="onboarding-icon" src="/app-icon-192.png" width="46" height="46" alt="" aria-hidden="true" />
+          <h1>{t('app_name')}</h1>
+          <p className="onboarding-intro">{t('onboarding_intro')}</p>
 
-        <section className="onboarding-access">
           <div className="onboarding-tabs" role="tablist" aria-label={t('onboarding_access')} data-active={tab}>
             {['join', 'create'].map((mode) => (
               <button
@@ -237,7 +241,7 @@ export default function Onboarding({ onCreate, onJoin }) {
                     className="onboarding-code"
                     required
                     aria-invalid={error?.field === 'code' || undefined}
-                    aria-describedby={`${id}-hint${error?.field === 'code' ? ` ${id}-error` : ''}`}
+                    aria-describedby={error?.field === 'code' ? `${id}-error` : undefined}
                   />
                 </label>
               )}
@@ -246,16 +250,22 @@ export default function Onboarding({ onCreate, onJoin }) {
 
               <button type="button" className="onboarding-primary" disabled={busy} onClick={submit}>
                 <span aria-live="polite">{busy ? t('busy') : t(tab === 'create' ? 'create_cta' : 'join_cta')}</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-                  <path d="M5 12h14m-5-5 5 5-5 5" />
-                </svg>
               </button>
-              <p className="onboarding-hint" id={`${id}-hint`}>{t(tab === 'create' ? 'hint_create' : 'hint_join')}</p>
             </fieldset>
           </div>
         </section>
+
+        <ul className="onboarding-steps" aria-label={t('onboarding_steps')}>
+          {STEPS.map(([key, label, icon, stroke]) => (
+            <li key={key}>
+              <span className={`onboarding-step-icon ${key}`} aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" focusable="false">{icon}</svg>
+              </span>
+              <span>{t(label)}</span>
+            </li>
+          ))}
+        </ul>
       </div>
-      <Meadow />
     </main>
   )
 }

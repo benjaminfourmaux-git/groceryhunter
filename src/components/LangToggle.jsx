@@ -7,10 +7,11 @@ const LANGS = [
   ['en', 'EN', 'English'],
 ]
 
-export default function LangToggle() {
+// `compact` : petite variante posée dans le coin de la carte de connexion.
+export default function LangToggle({ compact = false }) {
   const { t, lang, toggleLang } = useLang()
   return (
-    <div className="seg" role="group" aria-label={t('settings_language')}>
+    <div className={'seg' + (compact ? ' seg-compact' : '')} role="group" aria-label={t('settings_language')}>
       {LANGS.map(([code, short, name]) => (
         <button
           key={code}

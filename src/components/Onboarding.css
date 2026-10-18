@@ -1,9 +1,13 @@
-/* Écran Grand ciel isolé des anciennes classes onboarding de index.css. */
+/* Écran de connexion — maquette « Grand ciel — connexion ».
+   Le ciel remplit l'écran ; une carte crème en haut porte tout le formulaire,
+   pour rester visible au-dessus du clavier ; les trois étapes, les nuages et
+   la prairie sont en bas (le clavier les recouvre). Couleurs par variables de
+   thème : plein jour et crépuscule. */
 .onboarding-screen {
   --onboarding-safe-top: env(safe-area-inset-top, 0px);
   --onboarding-safe-bottom: env(safe-area-inset-bottom, 0px);
   /* Toute la hauteur, fixe : le clavier passe par-dessus le bas de l'écran,
-     qui ne se recompose pas. */
+     qui ne se recompose pas et ne défile pas. */
   position: fixed;
   top: 0;
   right: 0;
@@ -19,7 +23,7 @@
   overflow: hidden;
   overscroll-behavior: none;
   isolation: isolate;
-  background: var(--fond);
+  background: var(--ciel);
   color: var(--encre);
   -webkit-text-size-adjust: 100%;
 }
@@ -30,115 +34,116 @@
   box-sizing: border-box;
 }
 
-.onboarding-sky {
-  position: absolute;
-  inset: 0 0 auto;
-  /* Le ciel s'arrête sous le haut de la carte : sa ligne de nuages passe
-     derrière le formulaire, remonté depuis le retrait du titre. */
-  height: calc(220px + var(--onboarding-safe-top));
-  pointer-events: none;
-  z-index: -1;
-  overflow: hidden;
-  background: var(--ciel);
-}
-
-.onboarding-sky svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
 .onboarding-day { display: var(--sky-day, inline); }
 .onboarding-night { display: var(--sky-night, none); }
 
-.onboarding-topline {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+/* ---------- Décor ---------- */
+.onboarding-scenery {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.onboarding-birds {
+  position: absolute;
+  /* Dans la bande de la barre d'état, au-dessus de la carte (comme la maquette). */
+  top: 16px;
+  left: 0;
   width: 100%;
-  max-width: 430px;
-  min-height: 60px;
-  margin: 0 auto;
-  padding: 8px 25px 0;
+  height: 60px;
+}
+.onboarding-clouds {
+  position: absolute;
+  left: 0;
+  bottom: calc(86px + var(--onboarding-safe-bottom));
+  width: 100%;
+  height: 110px;
+}
+.onboarding-meadow {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: calc(130px + var(--onboarding-safe-bottom));
 }
 
-.onboarding-wordmark {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  font-size: .8125rem;
-  font-weight: 700;
-  letter-spacing: .03em;
-}
-
-.onboarding-language {
-  flex: none;
-  position: relative;
-}
-
-/* Pas de défilement : tout tient dans l'écran, champs placés en haut pour
-   rester visibles au-dessus du clavier. */
+/* ---------- Contenu (sans défilement) ---------- */
 .onboarding-scroll {
   position: relative;
   flex: 1;
   min-height: 0;
   width: 100%;
   overflow: hidden;
-  padding: 12px 22px 56px;
-  scrollbar-width: thin;
+  padding: 10px 20px 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.onboarding-hero,
-.onboarding-access {
+/* La carte crème. */
+.onboarding-card {
   position: relative;
-  max-width: 386px;
-  margin-right: auto;
-  margin-left: auto;
-}
-
-.onboarding-hero {
-  text-align: center;
-}
-
-.onboarding-hero h1 {
-  margin: 0 0 10px;
-  font-family: var(--font-display);
-  font-size: 1.875rem;
-  font-weight: 600;
-  line-height: 1.22;
-  letter-spacing: -.035em;
-  white-space: pre-line;
-  overflow-wrap: anywhere;
-}
-
-.onboarding-hero p {
+  width: 100%;
+  max-width: 400px;
   margin: 0 auto;
-  max-width: 320px;
-  font-size: .875rem;
-  line-height: 1.55;
-  white-space: pre-line;
-}
-
-.onboarding-access {
-  margin-top: 23px;
-  padding: 8px 22px 20px;
-  border-radius: 28px;
+  padding: 24px 22px;
+  border-radius: 26px;
   background: var(--nuage);
-  box-shadow: var(--shadow-pop);
+  box-shadow: 0 14px 34px rgba(42, 58, 52, 0.18);
 }
 
+.onboarding-language {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+/* Sélecteur FR / EN compact, sur fond lin. */
+.onboarding-screen .seg.seg-compact {
+  gap: 3px;
+  padding: 3px;
+  background: var(--fond);
+  box-shadow: none;
+}
+.onboarding-screen .seg.seg-compact .seg-btn {
+  width: 32px;
+  height: 26px;
+  font-size: 11px;
+}
+
+.onboarding-icon {
+  display: block;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 8px;
+  border-radius: 13px;
+}
+
+.onboarding-card h1 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.onboarding-intro {
+  margin: 0 0 16px;
+  color: var(--encre-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Onglets : pilule prairie qui glisse sur fond lin. */
 .onboarding-tabs {
   position: relative;
   display: flex;
   gap: 4px;
-  margin: 8px 0 18px;
+  margin: 0 0 16px;
   padding: 4px;
   border-radius: 999px;
-  background: var(--nuage-2);
+  background: var(--fond);
   isolation: isolate;
 }
-
 .onboarding-tabs::before {
   content: '';
   position: absolute;
@@ -147,107 +152,92 @@
   left: 4px;
   width: calc(50% - 6px);
   border-radius: inherit;
-  background: var(--nuage);
-  box-shadow: var(--shadow-seg);
-  transition: transform 240ms ease;
+  background: var(--prairie);
+  transition: transform 240ms var(--ease);
   z-index: -1;
 }
-
 .onboarding-tabs[data-active='create']::before {
   transform: translateX(calc(100% + 4px));
 }
-
 .onboarding-tabs button {
   flex: 1;
   min-width: 0;
-  min-height: 44px;
-  padding: 10px 6px;
+  height: 38px;
+  padding: 0 6px;
   border: 0;
   border-radius: 999px;
   background: transparent;
   color: var(--encre-2);
-  font-size: .8125rem;
+  font-size: 13px;
   font-weight: 700;
-  line-height: 1.4;
   cursor: pointer;
-  transition: color 200ms ease;
+  transition: color 200ms var(--ease);
 }
-
 .onboarding-tabs button[aria-selected='true'] {
-  color: var(--encre);
+  color: var(--on-accent);
 }
 
+/* Champs. */
 .onboarding-form fieldset {
   min-inline-size: 0;
   margin: 0;
   padding: 0;
   border: 0;
 }
-
 .onboarding-field {
   display: block;
-  margin: 0 0 14px;
+  margin: 0 0 12px;
 }
-
+.onboarding-field + .onboarding-field {
+  margin-bottom: 16px;
+}
 .onboarding-field > span {
   display: block;
-  margin-bottom: 7px;
-  color: var(--encre);
-  font-size: .75rem;
+  margin-bottom: 5px;
+  color: var(--encre-2);
+  font-size: 12px;
   font-weight: 700;
-  line-height: 1.5;
 }
-
 .onboarding-field em {
-  font-size: .6875rem;
   font-style: normal;
   font-weight: 400;
-  color: var(--encre-2);
 }
-
 .onboarding-field input {
   display: block;
   width: 100%;
   min-width: 0;
-  min-height: 52px;
-  border: 1px solid transparent;
+  border: 2px solid transparent;
   border-radius: 16px;
-  padding: 12px 15px;
-  background: var(--nuage-2);
+  padding: 10px 12px;
+  background: var(--fond);
   color: var(--encre);
   font: inherit;
-  font-size: max(16px, 1rem);
+  font-size: 16px;
   line-height: 1.5;
   appearance: none;
   -webkit-appearance: none;
   outline: none;
-  transition: border-color 180ms ease, box-shadow 180ms ease;
+  transition: border-color 180ms var(--ease);
 }
-
 .onboarding-field input::placeholder {
   color: var(--encre-2);
   opacity: 1;
 }
-
 .onboarding-field input:focus {
   border-color: var(--prairie);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--prairie) 18%, transparent);
 }
-
 .onboarding-field input[aria-invalid='true'] {
   border-color: var(--coquelicot);
 }
-
 .onboarding-field .onboarding-code {
   text-transform: uppercase;
-  letter-spacing: .2em;
-  text-align: center;
+  letter-spacing: 0.22em;
 }
 
 .onboarding-error {
-  margin: 0 0 12px;
+  margin: -4px 0 12px;
   color: var(--coquelicot);
-  font-size: .8125rem;
+  font-size: 13px;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -256,119 +246,88 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
   width: 100%;
-  min-height: 53px;
-  margin-top: 6px;
-  padding: 13px 15px;
+  height: 50px;
+  padding: 0 15px;
   border: 0;
   border-radius: 999px;
   background: var(--prairie);
   color: var(--on-accent);
-  box-shadow: var(--shadow-field);
-  font-size: .875rem;
+  box-shadow: var(--shadow-glow);
+  font-size: 15px;
   font-weight: 700;
-  line-height: 1.5;
   cursor: pointer;
-  transition: transform 180ms ease, opacity 180ms ease;
+  transition: transform 180ms var(--ease), opacity 180ms var(--ease);
 }
-
-.onboarding-primary svg {
-  flex: none;
-}
-
-.onboarding-primary span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
 .onboarding-primary:active:not(:disabled) {
-  transform: scale(.97);
-  transform-origin: center;
+  transform: scale(0.97);
 }
 
 .onboarding-screen button:disabled {
-  opacity: .65;
+  opacity: 0.65;
   cursor: default;
 }
-
 .onboarding-screen input:disabled {
-  opacity: .75;
+  opacity: 0.75;
 }
-
 .onboarding-screen button:focus-visible {
   outline: 3px solid var(--prairie);
   outline-offset: 3px;
 }
 
-.onboarding-hint {
-  margin: 12px 3px 0;
-  color: var(--encre-2);
-  font-size: .6875rem;
-  line-height: 1.6;
-  text-align: center;
-}
-
-.onboarding-meadow {
-  position: absolute;
-  bottom: -1px;
-  left: 0;
+/* Les trois étapes, dans le vide sous la carte. */
+.onboarding-steps {
+  list-style: none;
   width: 100%;
-  height: calc(70px + var(--onboarding-safe-bottom));
-  pointer-events: none;
-  z-index: -1;
+  max-width: 400px;
+  margin: 22px auto 0;
+  padding: 0 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-
-/* Les requêtes portent sur la hauteur utile de cette coque, zones sûres et
-   clavier déduits, plutôt que sur la hauteur du layout viewport de Safari. */
-@container (max-height: 800px) {
-  .onboarding-topline { min-height: 48px; padding-top: 4px; }
-  .onboarding-scroll { padding-top: 4px; padding-bottom: 42px; }
-  .onboarding-hero h1 { font-size: 1.75rem; margin-bottom: 8px; }
-  .onboarding-hero p { font-size: .8125rem; line-height: 1.5; }
-  .onboarding-access { margin-top: 18px; padding-bottom: 18px; }
-  .onboarding-tabs { margin-bottom: 15px; }
-  .onboarding-field { margin-bottom: 13px; }
-  .onboarding-sky { height: calc(200px + var(--onboarding-safe-top)); }
-  .onboarding-meadow { height: calc(55px + var(--onboarding-safe-bottom)); }
+.onboarding-steps li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 13px;
+  font-weight: 500;
 }
-
-@container (max-height: 700px) {
-  .onboarding-topline { min-height: 44px; padding-top: 0; }
-  .onboarding-scroll { padding-bottom: 34px; }
-  .onboarding-hero h1 { font-size: 1.625rem; line-height: 1.12; margin-bottom: 6px; }
-  .onboarding-hero p { font-size: .75rem; line-height: 1.4; }
-  .onboarding-access { margin-top: 14px; padding: 5px 20px 15px; }
-  .onboarding-tabs { margin-bottom: 13px; }
-  .onboarding-field { margin-bottom: 12px; }
-  .onboarding-field > span { margin-bottom: 6px; }
-  .onboarding-field input { min-height: 46px; padding-top: 10px; padding-bottom: 10px; }
-  .onboarding-primary { min-height: 48px; padding-block: 11px; margin-top: 2px; }
-  .onboarding-hint { margin-top: 10px; }
-  .onboarding-sky { height: calc(190px + var(--onboarding-safe-top)); }
-  .onboarding-meadow { height: calc(42px + var(--onboarding-safe-bottom)); }
+.onboarding-step-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  color: var(--on-accent);
 }
+.onboarding-step-icon.add { background: var(--prairie); }
+.onboarding-step-icon.check { background: var(--coquelicot); }
+.onboarding-step-icon.share { background: var(--soleil); color: var(--on-soleil); }
 
-@container (max-height: 600px) {
-  .onboarding-scroll { padding-bottom: 24px; }
-  .onboarding-hero h1 { font-size: 1.4375rem; }
-  .onboarding-hero p { font-size: .6875rem; }
-  .onboarding-access { margin-top: 9px; padding: 3px 16px 11px; }
-  .onboarding-tabs { margin-bottom: 10px; }
-  .onboarding-field { margin-bottom: 8px; }
-  .onboarding-field > span { margin-bottom: 4px; }
-  .onboarding-field input { min-height: 44px; padding: 8px 12px; }
-  .onboarding-primary { min-height: 44px; padding-block: 10px; }
-  .onboarding-hint { margin-top: 8px; line-height: 1.4; }
-  .onboarding-sky { height: calc(180px + var(--onboarding-safe-top)); }
-  .onboarding-meadow { height: calc(28px + var(--onboarding-safe-bottom)); }
+/* Petits écrans : on resserre ; les étapes disparaissent si la place manque
+   (elles tomberaient sur la prairie). */
+@container (max-height: 760px) {
+  .onboarding-card { padding: 20px; }
+  .onboarding-icon { width: 38px; height: 38px; border-radius: 11px; margin-bottom: 6px; }
+  .onboarding-card h1 { font-size: 24px; }
+  .onboarding-intro { margin-bottom: 12px; }
+  .onboarding-tabs { margin-bottom: 12px; }
+  .onboarding-steps { margin-top: 16px; }
+  .onboarding-meadow { height: calc(100px + var(--onboarding-safe-bottom)); }
+  .onboarding-clouds { bottom: calc(64px + var(--onboarding-safe-bottom)); }
+}
+@container (max-height: 680px) {
+  .onboarding-steps { display: none; }
+  .onboarding-icon { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .onboarding-screen button:active {
     transform: none !important;
   }
-
   .onboarding-screen *,
   .onboarding-screen *::before,
   .onboarding-screen *::after {
