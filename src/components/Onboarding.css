@@ -2,13 +2,15 @@
 .onboarding-screen {
   --onboarding-safe-top: env(safe-area-inset-top, 0px);
   --onboarding-safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Toute la hauteur, fixe : le clavier passe par-dessus le bas de l'écran,
+     qui ne se recompose pas. */
   position: fixed;
-  top: var(--onboarding-top, 0px);
+  top: 0;
   right: 0;
+  bottom: 0;
   left: 0;
   width: 100%;
   max-width: 480px;
-  height: var(--onboarding-height, 100dvh);
   margin: 0 auto;
   padding: var(--onboarding-safe-top) env(safe-area-inset-right, 0px) var(--onboarding-safe-bottom) env(safe-area-inset-left, 0px);
   display: flex;
@@ -31,7 +33,9 @@
 .onboarding-sky {
   position: absolute;
   inset: 0 0 auto;
-  height: calc(330px + var(--onboarding-safe-top));
+  /* Le ciel s'arrête sous le haut de la carte : sa ligne de nuages passe
+     derrière le formulaire, remonté depuis le retrait du titre. */
+  height: calc(220px + var(--onboarding-safe-top));
   pointer-events: none;
   z-index: -1;
   overflow: hidden;
@@ -73,18 +77,14 @@
   position: relative;
 }
 
-/* Unique zone défilante : formulaire, messages et commandes restent accessibles
-   au clavier, en paysage ou avec une police agrandie, sans déplacer le document. */
+/* Pas de défilement : tout tient dans l'écran, champs placés en haut pour
+   rester visibles au-dessus du clavier. */
 .onboarding-scroll {
   position: relative;
   flex: 1;
   min-height: 0;
   width: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-  -webkit-overflow-scrolling: touch;
-  scroll-padding-block: 16px;
+  overflow: hidden;
   padding: 12px 22px 56px;
   scrollbar-width: thin;
 }
@@ -97,11 +97,8 @@
   margin-left: auto;
 }
 
-/* L'espace laissé par l'ancien logo est conservé : le titre reste sous la
-   lune et le formulaire sous la ligne de nuages du ciel. */
 .onboarding-hero {
   text-align: center;
-  padding-top: 76px;
 }
 
 .onboarding-hero h1 {
@@ -325,7 +322,6 @@
 /* Les requêtes portent sur la hauteur utile de cette coque, zones sûres et
    clavier déduits, plutôt que sur la hauteur du layout viewport de Safari. */
 @container (max-height: 800px) {
-  .onboarding-hero { padding-top: 61px; }
   .onboarding-topline { min-height: 48px; padding-top: 4px; }
   .onboarding-scroll { padding-top: 4px; padding-bottom: 42px; }
   .onboarding-hero h1 { font-size: 1.75rem; margin-bottom: 8px; }
@@ -333,12 +329,11 @@
   .onboarding-access { margin-top: 18px; padding-bottom: 18px; }
   .onboarding-tabs { margin-bottom: 15px; }
   .onboarding-field { margin-bottom: 13px; }
-  .onboarding-sky { height: calc(278px + var(--onboarding-safe-top)); }
+  .onboarding-sky { height: calc(200px + var(--onboarding-safe-top)); }
   .onboarding-meadow { height: calc(55px + var(--onboarding-safe-bottom)); }
 }
 
 @container (max-height: 700px) {
-  .onboarding-hero { padding-top: 43px; }
   .onboarding-topline { min-height: 44px; padding-top: 0; }
   .onboarding-scroll { padding-bottom: 34px; }
   .onboarding-hero h1 { font-size: 1.625rem; line-height: 1.12; margin-bottom: 6px; }
@@ -350,12 +345,11 @@
   .onboarding-field input { min-height: 46px; padding-top: 10px; padding-bottom: 10px; }
   .onboarding-primary { min-height: 48px; padding-block: 11px; margin-top: 2px; }
   .onboarding-hint { margin-top: 10px; }
-  .onboarding-sky { height: calc(240px + var(--onboarding-safe-top)); }
+  .onboarding-sky { height: calc(190px + var(--onboarding-safe-top)); }
   .onboarding-meadow { height: calc(42px + var(--onboarding-safe-bottom)); }
 }
 
 @container (max-height: 600px) {
-  .onboarding-hero { padding-top: 32px; }
   .onboarding-scroll { padding-bottom: 24px; }
   .onboarding-hero h1 { font-size: 1.4375rem; }
   .onboarding-hero p { font-size: .6875rem; }
@@ -366,13 +360,8 @@
   .onboarding-field input { min-height: 44px; padding: 8px 12px; }
   .onboarding-primary { min-height: 44px; padding-block: 10px; }
   .onboarding-hint { margin-top: 8px; line-height: 1.4; }
-  .onboarding-sky { height: calc(204px + var(--onboarding-safe-top)); }
+  .onboarding-sky { height: calc(180px + var(--onboarding-safe-top)); }
   .onboarding-meadow { height: calc(28px + var(--onboarding-safe-bottom)); }
-}
-
-.onboarding-screen[data-keyboard='true'] {
-  --onboarding-safe-top: min(env(safe-area-inset-top, 0px), 12px);
-  --onboarding-safe-bottom: 0px;
 }
 
 @media (prefers-reduced-motion: reduce) {

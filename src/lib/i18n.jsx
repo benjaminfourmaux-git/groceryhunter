@@ -21,7 +21,6 @@ const fr = {
   // Onboarding
   app_name: 'Huntly',
   onboarding_wordmark: 'Huntly',
-  onboarding_title: 'Les courses,\nen bonne compagnie.',
   onboarding_intro: 'Ce qui manque à la maison,\nsur une seule et même liste.',
   onboarding_access: 'Accès au foyer',
   tagline: 'La liste commune de la maison, synchronisée sur tous les téléphones.',
@@ -125,7 +124,6 @@ const fr = {
 const en = {
   app_name: 'Huntly',
   onboarding_wordmark: 'Huntly',
-  onboarding_title: 'Shopping feels\nbetter together.',
   onboarding_intro: 'Everything your home needs,\non one shared list.',
   onboarding_access: 'Access your home',
   tagline: 'Your home’s shared list, synced across every phone.',

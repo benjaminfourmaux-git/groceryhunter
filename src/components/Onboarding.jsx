@@ -1,27 +1,16 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import LangToggle from './LangToggle'
 import { pickColor } from '../lib/colors'
 import { useLang } from '../lib/i18n'
 import { iosFocusHandlers } from '../lib/iosFocus'
 import './Onboarding.css'
 
-function revealWithin(scroller, element) {
-  if (!scroller || !element) return
-  const viewport = scroller.getBoundingClientRect()
-  const target = element.getBoundingClientRect()
-  if (target.top < viewport.top + 12) {
-    scroller.scrollTop += target.top - viewport.top - 12
-  } else if (target.bottom > viewport.bottom - 12) {
-    scroller.scrollTop += target.bottom - viewport.bottom + 12
-  }
-}
-
 function Sky() {
   return (
     <div className="onboarding-sky" aria-hidden="true">
-      <svg viewBox="0 0 394 330" preserveAspectRatio="xMidYMid slice" focusable="false">
+      <svg viewBox="0 0 394 330" preserveAspectRatio="xMidYMax slice" focusable="false">
         <g className="onboarding-day">
-          <circle cx="70" cy="112" r="27" fill="var(--soleil)" opacity=".8" />
+          <circle cx="34" cy="200" r="24" fill="var(--soleil)" opacity=".8" />
           <g fill="var(--nuage-ciel)" opacity=".4">
             <ellipse cx="315" cy="74" rx="74" ry="23" />
             <ellipse cx="367" cy="63" rx="46" ry="25" />
@@ -30,7 +19,7 @@ function Sky() {
           <path d="M291 123q5-6 10 0M312 109q4-5 8 0" stroke="var(--nuage-ciel)" strokeWidth="1.8" fill="none" strokeLinecap="round" />
         </g>
         <g className="onboarding-night">
-          <path d="M70 83a24 24 0 1 0 29 31 20 20 0 0 1-29-31" fill="var(--soleil)" />
+          <path d="M30 176a24 24 0 1 0 29 31 20 20 0 0 1-29-31" fill="var(--soleil)" />
           <g fill="var(--encre)">
             <circle cx="278" cy="55" r="1.5" /><circle cx="331" cy="118" r="1.8" />
             <circle cx="119" cy="38" r="1.2" /><circle cx="42" cy="186" r="1.3" />
@@ -77,49 +66,12 @@ export default function Onboarding({ onCreate, onJoin }) {
   const [focusHandlers] = useState(iosFocusHandlers)
   const errorText = error && (error.key ? t(error.key) : error.message)
 
-  // Safari conserve un layout viewport haut derrière le clavier. La coque suit
-  // uniquement le VisualViewport ; seul le contenu intérieur peut défiler.
-  // Variables locales : aucun changement sur html/body ni sur les vars de l'app.
-  useLayoutEffect(() => {
-    const screen = screenRef.current
-    const viewport = window.visualViewport
-    let frame = 0
-    const sync = () => {
-      cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => {
-        const height = viewport?.height ?? window.innerHeight
-        const focused = screen.contains(document.activeElement) && document.activeElement.matches('input')
-        // Conserver la composition clavier si le focus passe au bouton avant
-        // que Safari ait effectivement rendu la hauteur disponible.
-        const keyboard = document.documentElement.clientHeight - height > 120 &&
-          (focused || screen.dataset.keyboard === 'true')
-        screen.style.setProperty('--onboarding-height', `${height}px`)
-        screen.style.setProperty('--onboarding-top', `${viewport?.offsetTop ?? 0}px`)
-        screen.dataset.keyboard = keyboard ? 'true' : 'false'
-        if (focused) revealWithin(scrollRef.current, document.activeElement)
-      })
-    }
-    viewport?.addEventListener('resize', sync)
-    viewport?.addEventListener('scroll', sync)
-    window.addEventListener('resize', sync)
-    screen.addEventListener('focusin', sync)
-    screen.addEventListener('focusout', sync)
-    sync()
-    return () => {
-      cancelAnimationFrame(frame)
-      viewport?.removeEventListener('resize', sync)
-      viewport?.removeEventListener('scroll', sync)
-      window.removeEventListener('resize', sync)
-      screen.removeEventListener('focusin', sync)
-      screen.removeEventListener('focusout', sync)
-    }
-  }, [])
-
+  // Le clavier passe PAR-DESSUS l'écran, qui ne se recompose pas et ne défile
+  // pas : les champs sont placés assez haut pour rester visibles au-dessus.
   useEffect(() => {
     if (!error) return
     const field = error.field === 'name' ? nameRef.current : error.field === 'code' ? codeRef.current : null
     field?.focus({ preventScroll: true })
-    revealWithin(scrollRef.current, field || errorRef.current)
   }, [error])
 
   useEffect(() => {
@@ -161,6 +113,12 @@ export default function Onboarding({ onCreate, onJoin }) {
     document.getElementById(`${id}-${next}`)?.focus({ preventScroll: true })
   }
 
+  // Touche « OK » / Entrée du clavier dans un champ = valider.
+  function submitOnEnter(event) {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing || !event.target.matches('input')) return
+    submit(event)
+  }
+
   async function submit(event) {
     event.preventDefault()
     if (submittingRef.current) return
@@ -188,7 +146,7 @@ export default function Onboarding({ onCreate, onJoin }) {
   }
 
   return (
-    <main className="onboarding-screen" ref={screenRef} aria-labelledby={`${id}-title`}>
+    <main className="onboarding-screen" ref={screenRef} aria-label={t('app_name')}>
       <Sky />
       <div className="onboarding-topline">
         <span className="onboarding-wordmark">{t('onboarding_wordmark')}</span>
@@ -199,7 +157,6 @@ export default function Onboarding({ onCreate, onJoin }) {
 
       <div className="onboarding-scroll" ref={scrollRef}>
         <header className="onboarding-hero">
-          <h1 id={`${id}-title`}>{t('onboarding_title')}</h1>
           <p>{t('onboarding_intro')}</p>
         </header>
 
@@ -223,18 +180,18 @@ export default function Onboarding({ onCreate, onJoin }) {
             ))}
           </div>
 
-          <form id={`${id}-panel`} className="onboarding-form" role="tabpanel" aria-labelledby={`${id}-${tab}`} aria-busy={busy} ref={formRef} onSubmit={submit} noValidate {...focusHandlers}>
+          <div id={`${id}-panel`} className="onboarding-form" role="tabpanel" aria-labelledby={`${id}-${tab}`} aria-busy={busy} ref={formRef} onKeyDown={submitOnEnter} {...focusHandlers}>
             <fieldset disabled={busy}>
               <label className="onboarding-field" htmlFor={`${id}-name`}>
                 <span>{t('first_name')}</span>
                 <input
                   id={`${id}-name`}
                   ref={nameRef}
-                  name="given-name"
+                  name="huntly-search-pseudo"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder={t('first_name_ph')}
-                  autoComplete="given-name"
+                  autoComplete="off"
                   autoCapitalize="words"
                   enterKeyHint="next"
                   maxLength={40}
@@ -287,7 +244,7 @@ export default function Onboarding({ onCreate, onJoin }) {
 
               {errorText && <p id={`${id}-error`} className="onboarding-error" role="alert" ref={errorRef}>{errorText}</p>}
 
-              <button type="submit" className="onboarding-primary" disabled={busy}>
+              <button type="button" className="onboarding-primary" disabled={busy} onClick={submit}>
                 <span aria-live="polite">{busy ? t('busy') : t(tab === 'create' ? 'create_cta' : 'join_cta')}</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
                   <path d="M5 12h14m-5-5 5 5-5 5" />
@@ -295,7 +252,7 @@ export default function Onboarding({ onCreate, onJoin }) {
               </button>
               <p className="onboarding-hint" id={`${id}-hint`}>{t(tab === 'create' ? 'hint_create' : 'hint_join')}</p>
             </fieldset>
-          </form>
+          </div>
         </section>
       </div>
       <Meadow />
