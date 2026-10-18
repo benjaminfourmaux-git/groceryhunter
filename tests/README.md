@@ -7,4 +7,6 @@ Le banc navigateur utilise les composants réels avec des articles en mémoire. 
 
 Pour le cochage/décochage, il échantillonne aussi le déplacement image par image : aucune animation d'entrée ne doit se relancer lors du changement de place, ni aucun voisin bouger avant le rangement. Ces cas incluent les noms longs et un écho serveur simulé.
 
+Les panneaux Groupe et Réglages sont contrôlés depuis leur bouton réel : origine de la surface, position conservée de l'icône, flou arrêté au-dessus du socle, fermeture et retour du focus. Le classement est également essayé avec 18 membres, une ouverture interrompue et les mouvements réduits.
+
 Le clavier logiciel doit aussi être essayé sur un iPhone réel : une fenêtre de bureau redimensionnée ne reproduit pas tous les événements VisualViewport de Safari.

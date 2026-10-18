@@ -46,7 +46,7 @@ function Sky() {
   )
 }
 
-export default function Header({ household, onShowStats, onOpenSettings, hideSettingsBtn, settingsBtnRef }) {
+export default function Header({ household, onShowStats, onOpenSettings, hideSettingsBtn, settingsBtnRef, hideStatsBtn, statsBtnRef }) {
   const { t } = useLang()
   const [copied, setCopied] = useState(false)
   const copyTimer = useRef(null)
@@ -72,11 +72,13 @@ export default function Header({ household, onShowStats, onOpenSettings, hideSet
           </button>
         </div>
         <button
+          ref={statsBtnRef}
           type="button"
           className="icon-btn"
           onClick={onShowStats}
           aria-label={t('stats_title')}
           title={t('stats_title')}
+          style={{ opacity: hideStatsBtn ? 0 : 1 }}
         >
           <Icon name="users" size={21} />
         </button>

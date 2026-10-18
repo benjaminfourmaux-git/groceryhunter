@@ -21,7 +21,7 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  transform-origin: top right;
+  transform-origin: top left;
   will-change: transform, opacity;
   pointer-events: none;
 }
@@ -32,14 +32,53 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.panel-morph-scrim {
+.morph-scrim.panel-morph-scrim {
   transition: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.panel-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(40, 50, 42, 0.04);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  will-change: opacity;
+}
+
+.panel-morph .morph-icon {
+  right: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.morph.panel-morph .sheet-head h2 {
+  padding-right: var(--panel-action-space, 44px);
+}
+
+.panel-morph .sheet-sub {
+  margin: 8px 2px 0;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+.panel-morph .stats-scroll {
+  overflow: visible;
 }
 
 .panel-morph:not(.is-open),
 .panel-morph-scrim:not(.is-open) {
   pointer-events: none;
 }
+.panel-morph:not(.is-open) .morph-icon { pointer-events: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .panel-overlay,

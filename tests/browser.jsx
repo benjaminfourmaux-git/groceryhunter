@@ -8,6 +8,7 @@ import Header from '../src/components/Header'
 import AddBar from '../src/components/AddBar'
 import BottomSheet from '../src/components/BottomSheet'
 import SettingsMenu from '../src/components/SettingsMenu'
+import GroupPanel from '../src/components/GroupPanel'
 import Onboarding from '../src/components/Onboarding'
 import Toast from '../src/components/Toast'
 import { useLang } from '../src/lib/i18n'
@@ -42,11 +43,15 @@ export default function Sandbox() {
   const [sheet, setSheet] = useState(false)
   const [settings, setSettings] = useState(false)
   const [menuMounted, setMenuMounted] = useState(false)
+  const [group, setGroup] = useState(false)
+  const [groupMounted, setGroupMounted] = useState(false)
+  const [groupMembers, setGroupMembers] = useState([{ id: 'alice', ...members.alice, purchases_count: 12 }, { id: 'ben', display_name: 'Benjamin', color: 'terre', purchases_count: 8 }])
   const [login, setLogin] = useState(false)
   const [toast, setToast] = useState(null)
   const [report, setReport] = useState('Prêt')
   const viewRef = useRef(view); viewRef.current = view
   const barRef = useRef(null), indicatorRef = useRef(null), anchorRef = useRef(null)
+  const groupAnchorRef = useRef(null), dockRef = useRef(null)
   const state = useRef(null), renderCount = useRef(0), deletes = useRef(0), closes = useRef(0), toggles = useRef(0)
   renderCount.current++
   const now = useLifecycleClock(items)
@@ -268,6 +273,42 @@ export default function Sandbox() {
       assert('Réglages : ouverture inversée sans fermeture fantôme', !!document.querySelector('.panel-morph') && document.querySelector('.panel-morph').contains(document.activeElement))
       flushSync(() => setSettings(false)); await sleep(400)
       assert('Réglages : fermeture et focus rendus', !document.querySelector('.panel-morph') && document.activeElement === anchorRef.current)
+      for (const type of ['settings', 'group']) {
+        const anchor = type === 'group' ? groupAnchorRef : anchorRef
+        const setOpen = type === 'group' ? setGroup : setSettings
+        const setPresent = type === 'group' ? setGroupMounted : setMenuMounted
+        const origin = anchor.current.getBoundingClientRect()
+        flushSync(() => { setPresent(true); setOpen(true) })
+        const surface = document.querySelector('.panel-morph-surface')
+        const first = surface.getBoundingClientRect()
+        assert(`${type} : surface issue du bouton réel`, Math.abs(first.left - origin.left) < 2 && Math.abs(first.top - origin.top) < 2 && Math.abs(first.width - origin.width) < 2 && Math.abs(first.height - origin.height) < 2)
+        await sleep(380)
+        const panel = document.querySelector('.panel-morph')
+        const icon = panel.querySelector('.morph-icon').getBoundingClientRect()
+        const blur = document.querySelector('.panel-backdrop')
+        const blurStyle = getComputedStyle(blur)
+        assert(`${type} : icône conservée à la position du bouton`, Math.abs(icon.left - origin.left) < 1 && Math.abs(icon.top - origin.top) < 1)
+        assert(`${type} : flou limité au-dessus de la barre principale`, /blur\(10px\)/.test(blurStyle.backdropFilter || blurStyle.webkitBackdropFilter) && Math.abs(blur.getBoundingClientRect().bottom - dockRef.current.getBoundingClientRect().top) < 1 && panel.getBoundingClientRect().bottom < dockRef.current.getBoundingClientRect().top && getComputedStyle(dockRef.current).filter === 'none')
+        if (type === 'group') {
+          assert('Groupe : le bouton reste à l’intérieur du bord supérieur', panel.getBoundingClientRect().right - icon.right > 40 && document.querySelectorAll('.group-panel .member-stat').length === 2)
+          flushSync(() => setGroupMembers(Array.from({ length: 18 }, (_, index) => ({ id: `member-${index}`, display_name: `Membre ${index + 1}`, color: 'prairie', purchases_count: index }))))
+          await sleep(100)
+          const content = panel.querySelector('.morph-menu')
+          assert('Groupe nombreux : défilement interne sans couvrir la barre', content.scrollHeight > content.clientHeight && panel.getBoundingClientRect().bottom < dockRef.current.getBoundingClientRect().top && document.documentElement.scrollHeight === document.documentElement.clientHeight)
+          flushSync(() => setOpen(false)); await sleep(50); flushSync(() => setOpen(true)); await sleep(380)
+          assert('Groupe : réouverture sans fermeture fantôme', !!document.querySelector('.group-panel') && groupAnchorRef.current.style.opacity === '0')
+        }
+        flushSync(() => document.querySelector('.panel-morph .morph-icon').click())
+        await sleep(300)
+        assert(`${type} : fermeture par l’icône et focus rendus`, !document.querySelector('.panel-morph') && document.activeElement === anchor.current && anchor.current.style.opacity === '1')
+      }
+      reduce(true)
+      flushSync(() => { setGroupMounted(true); setGroup(true) })
+      assert('Groupe : mouvement réduit sans animation', document.querySelector('.group-panel .panel-morph-surface').getAnimations().length === 0)
+      flushSync(() => setGroup(false))
+      assert('Groupe : mouvement réduit referme immédiatement', !document.querySelector('.group-panel'))
+      reduce(false)
+      flushSync(() => setGroupMembers([{ id: 'alice', ...members.alice, purchases_count: 12 }, { id: 'ben', display_name: 'Benjamin', color: 'terre', purchases_count: 8 }]))
       flushSync(() => setSheet(true)); await sleep(45)
       const sheetNode = document.querySelector('.modal'), grip = document.querySelector('.modal-grip')
       const beforeDrag = sheetNode.getBoundingClientRect().top
@@ -306,17 +347,18 @@ export default function Sandbox() {
   }
   return <>
     {login ? <Onboarding onCreate={async () => { throw new Error('Erreur simulée, aucun compte créé') }} onJoin={async () => { throw new Error('Erreur simulée, aucun compte créé') }} /> : <div className="app">
-      <Header household={{ name: 'À la maison', join_code: 'TEST' }} onShowStats={() => setSheet(true)} onOpenSettings={() => { setMenuMounted(true); setSettings(true) }} settingsBtnRef={anchorRef} hideSettingsBtn={menuMounted} />
+      <Header household={{ name: 'À la maison', join_code: 'TEST' }} onShowStats={() => { setGroupMounted(true); setGroup(true) }} onOpenSettings={() => { setMenuMounted(true); setSettings(true) }} settingsBtnRef={anchorRef} hideSettingsBtn={menuMounted} statsBtnRef={groupAnchorRef} hideStatsBtn={groupMounted} />
       <div className="content-stack">
         <main id="list-panel" className="content has-cta" data-active={view === 'list'} inert={view !== 'list' ? '' : undefined}><ShoppingList items={list} now={now} memberById={members} onToggleBought={toggle} onDelete={remove} active={view === 'list'} /></main>
         <main id="history-panel" className="content" data-active={view === 'history'} inert={view !== 'history' ? '' : undefined}><History items={history} memberById={members} active={view === 'history'} /></main>
       </div>
-      <div className="dock"><div className="dock-ground">
+      <div className="dock"><div className="dock-ground" ref={dockRef}>
         <div className="add-slot" data-active={view === 'list'} inert={view !== 'list' ? '' : undefined}><div className="add-slot-inner"><AddBar onAdd={(name, quantity) => setItems((data) => [{ ...seed[0], id: `added-${Date.now()}`, name, quantity, created_at: new Date().toISOString() }, ...data])} /></div></div>
         <nav className="tabbar" role="tablist" data-active={view} ref={barRef}><span className="tab-indicator" ref={indicatorRef} />{['list', 'history'].map((mode) => <button key={mode} type="button" role="tab" className={`tab ${view === mode ? 'active' : ''}`} aria-selected={view === mode} onClick={() => setView(mode)}>{t(`tab_${mode}`)}</button>)}</nav>
       </div></div>
       {sheet && <BottomSheet onClose={closeSheet}><h2>Classement</h2><button onClick={closeSheet}>Fermer</button></BottomSheet>}
-      <SettingsMenu open={settings} onClose={() => setSettings(false)} onClosed={() => setMenuMounted(false)} anchorRef={anchorRef} onLeave={() => setSheet(true)} />
+      <GroupPanel open={group} onClose={() => setGroup(false)} onClosed={() => setGroupMounted(false)} anchorRef={groupAnchorRef} dockRef={dockRef} members={groupMembers} />
+      <SettingsMenu open={settings} onClose={() => setSettings(false)} onClosed={() => setMenuMounted(false)} anchorRef={anchorRef} dockRef={dockRef} onLeave={() => setSheet(true)} />
       {toast && <Toast key={toast.id} message={toast.msg} kind="info" onDismiss={() => setToast((current) => current?.id === toast.id ? null : current)} />}
     </div>}
     <details style={{ position: 'fixed', top: 2, left: 2, zIndex: 100, maxWidth: '96vw', maxHeight: '90vh', overflow: 'auto', background: 'var(--nuage)', borderRadius: 12, fontSize: 11 }}><summary>Vérifications locales</summary><button onClick={verify}>Lancer les vérifications</button><button onClick={() => setLogin((value) => !value)}>Liste / connexion de test</button><pre role="status" style={{ whiteSpace: 'pre-wrap' }}>{report}</pre></details>

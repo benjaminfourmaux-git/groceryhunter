@@ -11,7 +11,7 @@ import Header from './components/Header'
 import AddBar from './components/AddBar'
 import ShoppingList from './components/ShoppingList'
 import History from './components/History'
-import StatsPanel from './components/StatsPanel'
+import GroupPanel from './components/GroupPanel'
 import BottomSheet from './components/BottomSheet'
 import Icon from './components/Icon'
 import SettingsMenu from './components/SettingsMenu'
@@ -39,6 +39,7 @@ export default function App() {
   // fermeture : on masque le bouton ⋯ tant qu'il l'est (sinon on verrait le rond
   // par défaut en double pendant la résorption).
   const [menuMounted, setMenuMounted] = useState(false)
+  const [statsMounted, setStatsMounted] = useState(false)
   const [toast, setToast] = useState(null)
 
   const hid = member?.household_id
@@ -49,6 +50,8 @@ export default function App() {
   const skipItemsEchoUntil = useRef(0)
   const cleaning = useRef(false)
   const settingsBtnRef = useRef(null) // ancre du « morph » Réglages (le bouton ⋯)
+  const statsBtnRef = useRef(null)
+  const mainBarRef = useRef(null)
   const tabbarRef = useRef(null)
   const indicatorRef = useRef(null)
   const viewRef = useRef(view)
@@ -311,6 +314,8 @@ export default function App() {
   }
 
   function handleShowStats() {
+    setSettingsOpen(false)
+    setStatsMounted(true)
     setStatsOpen(true) // les membres portent déjà purchases_count
   }
 
@@ -336,9 +341,11 @@ export default function App() {
       <Header
         household={member.household}
         onShowStats={handleShowStats}
-        onOpenSettings={() => { setMenuMounted(true); setSettingsOpen(true) }}
+        onOpenSettings={() => { setStatsOpen(false); setMenuMounted(true); setSettingsOpen(true) }}
         hideSettingsBtn={menuMounted}
         settingsBtnRef={settingsBtnRef}
+        hideStatsBtn={statsMounted}
+        statsBtnRef={statsBtnRef}
       />
 
       <div className="content-stack">
@@ -357,7 +364,7 @@ export default function App() {
 
       <div className="dock">
         <Meadow />
-        <div className="dock-ground">
+        <div className="dock-ground" ref={mainBarRef}>
           <div className="add-slot" data-active={view === 'list'} inert={view !== 'list' ? '' : undefined} aria-hidden={view !== 'list'}>
             <div className="add-slot-inner"><AddBar onAdd={handleAdd} /></div>
           </div>
@@ -406,30 +413,16 @@ export default function App() {
         </BottomSheet>
       )}
 
-      {statsOpen && (
-        <BottomSheet className="sheet" onClose={() => setStatsOpen(false)}>
-          {(close) => (
-            <>
-              <div className="sheet-head with-action">
-                <h2>{t('stats_title')}</h2>
-                <button type="button" className="btn-pill" onClick={close}>
-                  {t('close')}
-                </button>
-              </div>
-              <p className="sheet-sub muted">{t('stats_sub')}</p>
-              <div className="stats-scroll">
-                <StatsPanel members={members} />
-              </div>
-            </>
-          )}
-        </BottomSheet>
-      )}
+      <GroupPanel open={statsOpen} onClose={() => setStatsOpen(false)}
+        onClosed={() => setStatsMounted(false)} anchorRef={statsBtnRef}
+        dockRef={mainBarRef} members={members} />
 
       <SettingsMenu
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         onClosed={() => setMenuMounted(false)}
         anchorRef={settingsBtnRef}
+        dockRef={mainBarRef}
         onLeave={() => setLeaving(true)}
       />
 
