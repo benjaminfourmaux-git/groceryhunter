@@ -27,7 +27,17 @@ const MOVE_MS = 250
 
 function BuyCheck({ bought, fraction, onToggle, t }) {
   const press = useRef(null)
+  const btnRef = useRef(null)
   const [pressed, setPressed] = useState(false)
+
+  // Un glissé de suppression parti de la case : elle relâche son appui (et ne
+  // cochera pas). Signal dédié, qui ne remonte pas jusqu'à la ligne.
+  useEffect(() => {
+    const el = btnRef.current
+    const release = () => { press.current = null; setPressed(false) }
+    el.addEventListener('swipe-start', release)
+    return () => el.removeEventListener('swipe-start', release)
+  }, [])
 
   // Petite éclosion locale, sans particule qui tombe hors de la carte.
   // Rien au premier affichage d'un article déjà coché.
@@ -83,6 +93,7 @@ function BuyCheck({ bought, fraction, onToggle, t }) {
 
   return (
     <button
+      ref={btnRef}
       type="button"
       className={'buy-check' + (bought ? ' bought' : '') + (pressed ? ' pressed' : '')}
       onPointerDown={onPointerDown}
@@ -143,6 +154,19 @@ function ListSeparator({ exiting, children }) {
 
 // Chaque ligne gère son propre swipe (suppression). Glisser au-delà du seuil =
 // suppression ; en deçà, la ligne revient. Un tap sur la case coche l'article.
+// Doigts réellement posés (événements tactiles natifs). Quand iOS se met à
+// faire défiler la liste, il annule le pointeur (pointercancel) mais continue
+// d'envoyer touchmove / touchend : on s'en sert pour ne pas perdre le glissé.
+let activeTouches = 0
+if (typeof document !== 'undefined') {
+  const count = (e) => { activeTouches = e.touches.length }
+  document.addEventListener('touchstart', count, { passive: true, capture: true })
+  document.addEventListener('touchend', count, { passive: true, capture: true })
+  document.addEventListener('touchcancel', count, { passive: true, capture: true })
+}
+const DIAGONAL = 1.4 // un glissé reste « horizontal » jusqu'à |dy| = 1,4 × |dx|
+const LATE_SWIPE_DX = 24 // geste parti en défilement : glissé si ≥ 24 px vers la gauche
+
 function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, exiting, t }) {
   const rowRef = useRef(null)
   const fgRef = useRef(null)
@@ -172,7 +196,9 @@ function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, e
   function down(e) {
     if (!e.isPrimary || e.button !== 0 || drag.current) return
     if (removing.current) return
-    if (e.target.closest('.buy-check')) return // la case ne lance jamais de glissé
+    // Le glissé peut partir de la case : un tap la coche toujours, un glissé
+    // supprime (la case annule son appui dès que le doigt bouge).
+    const fromCheck = e.target.closest('.buy-check')
     drag.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -183,38 +209,94 @@ function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, e
       lastX: e.clientX,
       lastT: e.timeStamp,
       vx: 0,
+      touch: e.pointerType === 'touch',
+      fromCheck,
     }
     const interrupt = () => cancel()
     const visibility = () => { if (document.hidden) cancel() }
+    // Toucher : glissé reconnu → on bloque le défilement de la liste ; si iOS
+    // a déjà pris la main (pointeur annulé), on suit le doigt par ces événements.
+    const onTouchMove = (te) => {
+      const d = drag.current
+      const p = te.touches[0]
+      if (!d || !p) return
+      if (d.axis === 'h' && te.cancelable) te.preventDefault()
+      if (d.viaTouch) track(p.clientX, p.clientY, te.timeStamp)
+    }
+    const onTouchEnd = (te) => {
+      const d = drag.current
+      if (!d?.viaTouch || te.touches.length) return
+      finish(te.timeStamp)
+    }
     window.addEventListener('blur', interrupt)
     document.addEventListener('visibilitychange', visibility)
+    window.addEventListener('touchmove', onTouchMove, { passive: false })
+    window.addEventListener('touchend', onTouchEnd)
+    window.addEventListener('touchcancel', interrupt)
     drag.current.cleanup = () => {
       window.removeEventListener('blur', interrupt)
       document.removeEventListener('visibilitychange', visibility)
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('touchend', onTouchEnd)
+      window.removeEventListener('touchcancel', interrupt)
     }
     fgRef.current.style.transition = 'none'
-    try { fgRef.current.setPointerCapture(e.pointerId) } catch { /* noop */ }
+    // Depuis la case, la capture attend que le glissé soit reconnu : posée dès
+    // l'appui, elle détournerait le clic de la case (tap sans effet).
+    if (!fromCheck) capture()
   }
 
   function move(e) {
     const d = drag.current
-    if (!d || e.pointerId !== d.pid) return
-    const dx = e.clientX - d.startX
-    const dy = e.clientY - d.startY
+    if (!d || e.pointerId !== d.pid || d.viaTouch) return
+    track(e.clientX, e.clientY, e.timeStamp)
+  }
+
+  // Capture du pointeur sur la ligne ; un glissé parti de la case lui retire
+  // son appui (sinon le rond resterait enfoncé).
+  function capture() {
+    const d = drag.current
+    if (!d || d.captured) return
+    d.captured = true
+    if (d.fromCheck) {
+      d.fromCheck.dispatchEvent(new Event('swipe-start'))
+    }
+    if (d.viaTouch) return
+    try { fgRef.current.setPointerCapture(d.pid) } catch { /* noop */ }
+  }
+
+  function track(clientX, clientY, timeStamp) {
+    const d = drag.current
+    if (!d) return
+    const dx = clientX - d.startX
+    const dy = clientY - d.startY
     if (d.axis === null && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
-      d.axis = Math.abs(dy) > Math.abs(dx) ? 'v' : 'h'
+      // Tolérant aux gestes en biais : horizontal tant que |dy| ≤ 1,4 × |dx|.
+      d.axis = Math.abs(dy) > Math.abs(dx) * DIAGONAL ? 'v' : 'h'
+      if (d.axis === 'h') capture()
+    }
+    // Parti en défilement puis nettement vers la gauche : la ligne suit aussi
+    // (sans saut : on retranche le seuil).
+    // Un défilement ordinaire qui dérive un peu à gauche ne déclenche rien :
+    // il faut que la part horizontale pèse (|dx| ≥ ½ |dy|).
+    if (d.axis === 'v' && dx <= -LATE_SWIPE_DX && Math.abs(dx) >= Math.abs(dy) * 0.5) {
+      d.axis = 'h'
+      capture()
+      d.offset = LATE_SWIPE_DX
+      d.lastX = clientX
+      d.lastT = timeStamp
     }
     if (d.axis !== 'h') return
 
-    const dt = e.timeStamp - d.lastT
+    const dt = timeStamp - d.lastT
     if (dt > 0) {
-      const inst = (e.clientX - d.lastX) / dt
+      const inst = (clientX - d.lastX) / dt
       d.vx = d.vx * 0.4 + inst * 0.6
-      d.lastX = e.clientX
-      d.lastT = e.timeStamp
+      d.lastX = clientX
+      d.lastT = timeStamp
     }
 
-    const x = Math.max(-d.width, Math.min(0, dx))
+    const x = Math.max(-d.width, Math.min(0, dx + (d.offset || 0)))
     d.x = x
     fgRef.current.style.transform = `translateX(${x}px)`
     rowRef.current.toggleAttribute('data-armed', -x >= d.width * COMMIT_RATIO)
@@ -222,7 +304,13 @@ function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, e
 
   function up(e) {
     const d = drag.current
-    if (!d || e.pointerId !== d.pid) return
+    if (!d || e.pointerId !== d.pid || d.viaTouch) return
+    finish(e.timeStamp)
+  }
+
+  function finish(timeStamp) {
+    const d = drag.current
+    if (!d) return
     d.cleanup?.()
     drag.current = null
 
@@ -230,7 +318,7 @@ function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, e
     const row = rowRef.current
     fg.style.transition = ''
 
-    const flicked = e.timeStamp - d.lastT < 100 && d.vx <= -FLICK_VELOCITY && -d.x >= FLICK_MIN_DX
+    const flicked = timeStamp - d.lastT < 100 && d.vx <= -FLICK_VELOCITY && -d.x >= FLICK_MIN_DX
     const commit = d.axis === 'h' && (row.hasAttribute('data-armed') || flicked)
 
     if (commit) {
@@ -276,6 +364,17 @@ function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, e
     fgRef.current.style.transform = ''
     rowRef.current.removeAttribute('data-armed')
   }
+  // Pointeur annulé : si un doigt est toujours posé (iOS a lancé le défilement),
+  // le glissé continue par les événements tactiles ; sinon, vraie annulation.
+  function pointerLost(e) {
+    const d = drag.current
+    if (!d || (e?.pointerId != null && e.pointerId !== d.pid)) return
+    if (d.touch && activeTouches > 0) {
+      d.viaTouch = true
+      return
+    }
+    cancel(e)
+  }
   useEffect(() => () => drag.current?.cleanup?.(), [])
 
   return (
@@ -305,8 +404,8 @@ function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, e
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
-        onPointerCancel={cancel}
-        onLostPointerCapture={cancel}
+        onPointerCancel={pointerLost}
+        onLostPointerCapture={pointerLost}
       >
         <div className="item-main">
           {adder && <Avatar name={adder.display_name} color={adder.color} size={32} />}

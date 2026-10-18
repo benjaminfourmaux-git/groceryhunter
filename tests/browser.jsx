@@ -148,10 +148,12 @@ export default function Sandbox() {
       assert('Activation clavier/accessibilité préservée', box().getAttribute('aria-pressed') === 'false' && toggles.current === 4)
       const blockedClick = (type) => {
         const check = box()
+        // Mouvement vertical : un glissé horizontal parti de la case supprime
+        // désormais l'article (vérifié plus bas).
         pointer(check, 'pointerdown', 340, 160)
-        pointer(check, type, 310, 160)
-        pointer(check, 'pointerup', 310, 160)
-        pointer(check, 'pointerout', 310, 160)
+        pointer(check, type, 340, 190)
+        pointer(check, 'pointerup', 340, 190)
+        pointer(check, 'pointerout', 340, 190)
         check.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1, button: 0 }))
       }
       flushSync(() => blockedClick('pointermove'))
@@ -175,6 +177,16 @@ export default function Sandbox() {
         check.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1, button: 0 }))
       })
       assert('Un second doigt ne désactive pas le tap principal', box().getAttribute('aria-pressed') === 'true' && toggles.current === 5)
+      flushSync(() => {
+        const check = box()
+        pointer(check, 'pointerdown', 340, 160)
+        pointer(check, 'pointermove', 150, 162)
+        pointer(check, 'pointerup', 150, 162)
+        check.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1, button: 0 }))
+      })
+      await sleep(1500) // glissé (≤ 360 ms) + repli lent (400) + sortie (220)
+      assert('Glissé parti de la case : supprime sans cocher', deletes.current === 1 && toggles.current === 5 && !row(0))
+      deletes.current = 0
       flushSync(() => setItems(seed))
       await sleep(450)
       await verifyRanging(assert)
