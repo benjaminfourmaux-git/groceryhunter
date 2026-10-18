@@ -1,13 +1,15 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import Icon from './Icon'
 import { useLang } from '../lib/i18n'
-import { EASE, EXIT_MS, useReducedMotion } from '../lib/motion'
+import { EASE, useReducedMotion } from '../lib/motion'
 import { animatePanelMotion, freezePanelMotion, usePanelDialog } from './BottomSheet'
 import './PanelMotion.css'
 
 const MARGIN = 12
 const SPRING = 'cubic-bezier(0.34, 1.15, 0.55, 1)'
 const SURFACE_PROPERTIES = ['transform', 'opacity', 'borderRadius']
+const CLOSE_MS = 280
+const CLOSE_EASE = 'cubic-bezier(0.4, 0, 0.2, 1)' // repli régulier, visible jusqu'au bouton
 
 // Une géométrie et un cycle de vie communs aux panneaux de l'en-tête.
 // La surface grandit depuis le bouton réel ; le contenu reste à sa taille
@@ -122,7 +124,7 @@ export default function MorphPanel({ open, onClose, onClosed, anchorRef, dockRef
       Math.abs(visual.width - b.width) / Math.max(1, panelWidth - b.width),
       Math.abs(visual.height - b.height) / Math.max(1, panelHeight - b.height)
     ) : 0
-    const duration = (open ? 300 : EXIT_MS) * Math.min(1, Math.max(0, open ? 1 - progress : progress))
+    const duration = (open ? 300 : CLOSE_MS) * Math.min(1, Math.max(0, open ? 1 - progress : progress))
     animatePanelMotion(menu, { opacity: open ? '1' : '0' }, {
       duration: open ? Math.min(240, duration) : Math.min(160, duration),
       delay: open && !previous ? 60 : 0, easing: EASE, reduced,
@@ -135,7 +137,10 @@ export default function MorphPanel({ open, onClose, onClosed, anchorRef, dockRef
       borderRadius: open ? radius + 'px' : roundRadius,
       opacity: open ? '1' : '0',
     }, {
-      duration, easing: open ? SPRING : EASE, reduced,
+      // Fermeture : la surface se replie, opaque, jusque dans le bouton, et ne
+      // s'efface qu'à la toute fin (sinon elle disparaît avant d'être rentrée).
+      duration, easing: open ? SPRING : CLOSE_EASE, reduced,
+      holdOpacity: open ? undefined : 0.8,
       onFinish: open ? undefined : () => {
         if (callbacks.current.open) return
         geometryRef.current = null

@@ -30,14 +30,19 @@ export function freezePanelMotion(node, properties) {
   return from
 }
 
-export function animatePanelMotion(node, target, { duration, easing, reduced, delay = 0, onFinish } = {}) {
+// `holdOpacity` (0..1, facultatif) : l'opacité ne bouge qu'après cette part de
+// la durée — une surface qui se replie reste visible jusqu'au bout du geste.
+export function animatePanelMotion(node, target, { duration, easing, reduced, delay = 0, onFinish, holdOpacity } = {}) {
   const from = freezePanelMotion(node, Object.keys(target))
   Object.assign(node.style, target)
   if (reduced || !node.animate || duration < 1) {
     onFinish?.()
     return
   }
-  const animation = node.animate([from, target], { duration, easing, delay, fill: 'both' })
+  const frames = holdOpacity && 'opacity' in target
+    ? [from, { opacity: from.opacity, offset: holdOpacity }, target]
+    : [from, target]
+  const animation = node.animate(frames, { duration, easing, delay, fill: 'both' })
   animation.onfinish = () => {
     animation.onfinish = null
     animation.cancel() // L'état final est déjà posé en inline.

@@ -2,9 +2,10 @@ import Icon from './Icon'
 import { useLang } from '../lib/i18n'
 import { setThemePref, useEffectiveTheme } from '../lib/theme'
 import MorphPanel from './MorphPanel'
+import LangToggle from './LangToggle'
 
 export default function SettingsMenu({ open, onClose, onClosed, anchorRef, dockRef, onLeave }) {
-  const { t, lang, toggleLang } = useLang()
+  const { t } = useLang()
   const theme = useEffectiveTheme()
   return (
     <MorphPanel open={open} onClose={onClose} onClosed={onClosed}
@@ -36,23 +37,7 @@ export default function SettingsMenu({ open, onClose, onClosed, anchorRef, dockR
         </div>
         <div className="settings-row">
           <span className="settings-label">{t('settings_language')}</span>
-          <div className="seg" role="group" aria-label={t('settings_language')}>
-            {[
-              ['fr', 'FR', 'Français'],
-              ['en', 'EN', 'English'],
-            ].map(([code, short, name]) => (
-              <button
-                key={code}
-                type="button"
-                className={'seg-btn narrow' + (lang === code ? ' active' : '')}
-                aria-pressed={lang === code}
-                aria-label={name}
-                onClick={() => lang !== code && toggleLang()}
-              >
-                {short}
-              </button>
-            ))}
-          </div>
+          <LangToggle />
         </div>
         <button
           type="button"

@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import LangToggle from './LangToggle'
 import { pickColor } from '../lib/colors'
 import { useLang } from '../lib/i18n'
+import { iosFocusHandlers } from '../lib/iosFocus'
 import './Onboarding.css'
 
 function revealWithin(scroller, element) {
@@ -43,23 +44,6 @@ function Sky() {
   )
 }
 
-function Basket() {
-  return (
-    <svg className="onboarding-basket" viewBox="0 0 84 78" fill="none" aria-hidden="true" focusable="false">
-      <ellipse cx="43" cy="71" rx="25" ry="4" fill="var(--encre)" opacity=".07" />
-      <path d="M43 27l9-14c2-4 8-6 10-3s0 7-2 11L51 37" fill="#d48b52" />
-      <path d="M53 13c-3-8 2-11 4-7 2-8 8-7 6-1 7-4 10 0 4 4" fill="var(--prairie)" />
-      <path d="M26 33c-1-13 3-22 8-24 3 5 5 16 1 29" fill="var(--colline)" />
-      <path d="M31 33c7-14 12-16 16-14 0 8-6 16-13 20" fill="var(--prairie)" />
-      <path d="M21 37c-8-2-9-11-5-15 5-4 10-3 13 2 5-3 10 0 10 6 0 7-7 12-18 7" fill="var(--coquelicot)" />
-      <path d="M20 22c-2-6 0-9 2-10" stroke="var(--prairie)" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M13 34h58l-7 31a6 6 0 0 1-6 5H26a6 6 0 0 1-6-5z" fill="var(--nuage)" stroke="var(--prairie)" strokeWidth="2.5" />
-      <path d="M27 39l8-17M57 39l-8-17" stroke="var(--prairie)" strokeWidth="3.5" strokeLinecap="round" />
-      <path d="M30 48v12M42 48v12M54 48v12" stroke="var(--prairie)" strokeWidth="2" strokeLinecap="round" opacity=".45" />
-    </svg>
-  )
-}
-
 function Meadow() {
   return (
     <svg className="onboarding-meadow" viewBox="0 0 394 115" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
@@ -73,7 +57,7 @@ function Meadow() {
 }
 
 export default function Onboarding({ onCreate, onJoin }) {
-  const { t, lang } = useLang()
+  const { t } = useLang()
   const [tab, setTab] = useState('join')
   const [name, setName] = useState('')
   const [household, setHousehold] = useState('')
@@ -89,6 +73,8 @@ export default function Onboarding({ onCreate, onJoin }) {
   const submittingRef = useRef(false)
   const animationRef = useRef(null)
   const id = useId()
+  // Champs : focus sans défilement iOS (pas de sursaut de toute la page).
+  const [focusHandlers] = useState(iosFocusHandlers)
   const errorText = error && (error.key ? t(error.key) : error.message)
 
   // Safari conserve un layout viewport haut derrière le clavier. La coque suit
@@ -206,14 +192,13 @@ export default function Onboarding({ onCreate, onJoin }) {
       <Sky />
       <div className="onboarding-topline">
         <span className="onboarding-wordmark">{t('onboarding_wordmark')}</span>
-        <div className="onboarding-language" style={{ '--onboarding-language': `"${lang.toUpperCase()}"` }}>
+        <div className="onboarding-language">
           <LangToggle />
         </div>
       </div>
 
       <div className="onboarding-scroll" ref={scrollRef}>
         <header className="onboarding-hero">
-          <Basket />
           <h1 id={`${id}-title`}>{t('onboarding_title')}</h1>
           <p>{t('onboarding_intro')}</p>
         </header>
@@ -238,7 +223,7 @@ export default function Onboarding({ onCreate, onJoin }) {
             ))}
           </div>
 
-          <form id={`${id}-panel`} className="onboarding-form" role="tabpanel" aria-labelledby={`${id}-${tab}`} aria-busy={busy} ref={formRef} onSubmit={submit} noValidate>
+          <form id={`${id}-panel`} className="onboarding-form" role="tabpanel" aria-labelledby={`${id}-${tab}`} aria-busy={busy} ref={formRef} onSubmit={submit} noValidate {...focusHandlers}>
             <fieldset disabled={busy}>
               <label className="onboarding-field" htmlFor={`${id}-name`}>
                 <span>{t('first_name')}</span>

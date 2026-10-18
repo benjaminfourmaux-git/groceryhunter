@@ -19,8 +19,8 @@ import { animateCopyChange } from './copyMotion'
 
 const fr = {
   // Onboarding
-  app_name: 'Liste de courses',
-  onboarding_wordmark: 'Courses du foyer',
+  app_name: 'Huntly',
+  onboarding_wordmark: 'Huntly',
   onboarding_title: 'Les courses,\nen bonne compagnie.',
   onboarding_intro: 'Ce qui manque à la maison,\nsur une seule et même liste.',
   onboarding_access: 'Accès au foyer',
@@ -52,6 +52,7 @@ const fr = {
   theme_dark: 'Crépuscule',
   theme_change: 'Changer le thème',
   theme_light_short: 'Clair',
+  rotate_hint: 'Tourne ton téléphone en mode portrait pour utiliser l’app.',
   theme_dark_short: 'Soir',
   settings_language: 'Langue',
   bell_on: 'Notifications activées',
@@ -122,8 +123,8 @@ const fr = {
 }
 
 const en = {
-  app_name: 'Shopping list',
-  onboarding_wordmark: 'Home groceries',
+  app_name: 'Huntly',
+  onboarding_wordmark: 'Huntly',
   onboarding_title: 'Shopping feels\nbetter together.',
   onboarding_intro: 'Everything your home needs,\non one shared list.',
   onboarding_access: 'Access your home',
@@ -154,6 +155,7 @@ const en = {
   theme_dark: 'Dusk',
   theme_change: 'Change theme',
   theme_light_short: 'Light',
+  rotate_hint: 'Turn your phone upright to use the app.',
   theme_dark_short: 'Evening',
   settings_language: 'Language',
   bell_on: 'Notifications on',
