@@ -504,6 +504,8 @@ h2 {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
+  min-width: 0;
   /* `backwards` (et non `both`) : une fois l'entrée jouée, l'animation ne fige
      plus `transform`, qui sert au soulèvement au-dessus du clavier. */
 
@@ -532,11 +534,15 @@ h2 {
   box-shadow: var(--shadow-field);
   transition: box-shadow 0.2s var(--ease);
 }
+/* Safari donne aux champs une largeur naturelle large : sans base nulle, le
+   champ article repoussait Qté et + hors de l'écran sur iPhone. */
 .add-name {
-  flex: 1;
+  flex: 1 1 0;
+  width: 0;
   min-width: 0;
 }
 .add-qty {
+  flex: none;
   width: 68px;
   text-align: center;
   padding-left: 12px;
@@ -1816,8 +1822,10 @@ button.settings-row:active {
   transform: translateX(8px);
   transition: opacity 150ms var(--ease), transform 220ms var(--ease), visibility 0s 180ms;
 }
-.add-slot { display: grid; grid-template-rows: 1fr; opacity: 1; margin-bottom: 0; transition: grid-template-rows 220ms var(--ease), opacity 150ms var(--ease), margin-bottom 220ms var(--ease), visibility 0s; }
-.add-slot-inner { min-height: 0; }
+/* Colonne bornée à la largeur disponible (minmax(0, 1fr)) : une colonne
+   « auto » prenait la largeur naturelle des champs, plus large sur Safari. */
+.add-slot { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr; opacity: 1; margin-bottom: 0; transition: grid-template-rows 220ms var(--ease), opacity 150ms var(--ease), margin-bottom 220ms var(--ease), visibility 0s; }
+.add-slot-inner { min-height: 0; min-width: 0; }
 .add-slot[data-active='false'] { grid-template-rows: 0fr; opacity: 0; margin-bottom: -12px; pointer-events: none; visibility: hidden; transition: grid-template-rows 220ms var(--ease), opacity 150ms var(--ease), margin-bottom 220ms var(--ease), visibility 0s 150ms; }
 .add-slot[data-active='false'] > .add-slot-inner { overflow: hidden; }
 button[data-pressing]:not(.buy-check) { transform: scale(0.97); }
