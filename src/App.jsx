@@ -26,6 +26,10 @@ export default function App() {
   const [members, setMembers] = useState([])
   const [items, setItems] = useState([])
   const [products, setProducts] = useState([]) // l'inventaire : un produit distinct par ligne
+  // Sélection dans l'inventaire : locale et non synchronisée, pour que deux
+  // membres puissent cocher en même temps sans se gêner.
+  const [selected, setSelected] = useState(() => new Set())
+  const [invSort, setInvSort] = useState('rank') // rank | alpha
   const [now, setNow] = useState(() => Date.now()) // tick 1s : fait vivre les comptes à rebours
   const [view, setView] = useState('list') // list | history
   const [pushState, setPushState] = useState('default')
@@ -85,6 +89,31 @@ export default function App() {
   const loadProducts = useCallback(async (h) => {
     setProducts(await api.getProducts(h))
   }, [])
+
+  const toggleSelected = useCallback((id) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
+  }, [])
+
+  // La sélection ne survit pas au changement d'onglet.
+  useEffect(() => {
+    if (view !== 'history') setSelected((prev) => (prev.size ? new Set() : prev))
+  }, [view])
+
+  // Un produit supprimé par quelqu'un d'autre ne doit pas rester sélectionné :
+  // sinon les deux boutons resteraient affichés pour une ligne disparue.
+  useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev
+      const alive = new Set(products.map((p) => p.id))
+      const next = new Set()
+      prev.forEach((id) => alive.has(id) && next.add(id))
+      return next.size === prev.size ? prev : next
+    })
+  }, [products])
 
   // Effet « press organique » sur tous les boutons (une seule fois).
   useEffect(() => initPress(), [])
@@ -489,7 +518,13 @@ export default function App() {
             onDelete={handleDelete}
           />
         ) : (
-          <History products={products} memberById={memberById} />
+          <History
+            products={products}
+            memberById={memberById}
+            selected={selected}
+            onToggleSelected={toggleSelected}
+            sort={invSort}
+          />
         )}
       </main>
 

@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import Icon from './Icon'
 import Avatar from './Avatar'
+import CheckDot from './CheckDot'
 import { useLang } from '../lib/i18n'
 import { collapseRow, resetRow } from '../lib/swipeExit'
 import { T1_MS } from '../lib/config'
@@ -8,73 +9,6 @@ import { T1_MS } from '../lib/config'
 const COMMIT_RATIO = 0.4 // fraction de la largeur de ligne à atteindre pour supprimer
 const FLICK_VELOCITY = 1.2 // px/ms vers la gauche : un geste vif supprime même court
 const FLICK_MIN_DX = 24 // mais il faut un déplacement minimal, pour éviter le faux geste
-
-const RING_R = 16
-const RING_CIRC = 2 * Math.PI * RING_R // circonférence de l'anneau de compte à rebours
-
-// Case à cocher « acheté » (à droite). Vide = à acheter ; cochée = rouge + anneau
-// qui se vide sur la durée T1 (le temps restant avant de filer dans l'historique).
-// Tap uniquement : dès que le doigt bouge, l'appui est annulé (le rond se
-// relâche et rien n'est coché). Glisser depuis la case ne fait rien.
-const TAP_SLOP = 6 // px tolérés avant d'annuler l'appui
-
-function BuyCheck({ bought, fraction, onToggle, t }) {
-  const press = useRef(null)
-  const [pressed, setPressed] = useState(false)
-
-  function onPointerDown(e) {
-    press.current = { x: e.clientX, y: e.clientY, pid: e.pointerId }
-    setPressed(true)
-  }
-  function onPointerMove(e) {
-    const p = press.current
-    if (!p || e.pointerId !== p.pid) return
-    if (Math.abs(e.clientX - p.x) > TAP_SLOP || Math.abs(e.clientY - p.y) > TAP_SLOP) {
-      press.current = null
-      setPressed(false)
-    }
-  }
-  function release() {
-    setPressed(false)
-  }
-  function onClick(e) {
-    // e.detail === 0 : activation au clavier (Entrée / Espace), toujours valide.
-    const valid = e.detail === 0 || press.current
-    press.current = null
-    if (valid) onToggle()
-  }
-
-  return (
-    <button
-      type="button"
-      className={'buy-check' + (bought ? ' bought' : '') + (pressed ? ' pressed' : '')}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={release}
-      onPointerCancel={() => { press.current = null; release() }}
-      onPointerLeave={() => { press.current = null; release() }}
-      onClick={onClick}
-      aria-label={bought ? t('aria_uncheck') : t('aria_check')}
-    >
-      {bought && (
-        <svg className="buy-ring" viewBox="0 0 40 40" aria-hidden="true">
-          <circle className="buy-ring-track" cx="20" cy="20" r={RING_R} />
-          <circle
-            className="buy-ring-fill"
-            cx="20"
-            cy="20"
-            r={RING_R}
-            strokeDasharray={RING_CIRC}
-            strokeDashoffset={RING_CIRC * (1 - fraction)}
-          />
-        </svg>
-      )}
-      <span className="buy-dot" aria-hidden="true">
-        {bought && <Icon name="check" size={13} strokeWidth={3} />}
-      </span>
-    </button>
-  )
-}
 
 // Chaque ligne gère son propre swipe (suppression). Glisser au-delà du seuil =
 // suppression ; en deçà, la ligne revient. Un tap sur la case coche l'article.
@@ -198,11 +132,12 @@ function SwipeRow({ it, now, adder, onToggleBought, onDelete, t }) {
           <span className="item-name">{it.name}</span>
         </div>
         {it.quantity && <span className="qty-badge">{it.quantity}</span>}
-        <BuyCheck
-          bought={bought}
+        <CheckDot
+          checked={bought}
           fraction={fraction}
+          tone="danger"
           onToggle={() => onToggleBought(it.id, !bought)}
-          t={t}
+          label={bought ? t('aria_uncheck') : t('aria_check')}
         />
       </div>
     </li>
