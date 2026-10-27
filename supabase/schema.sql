@@ -471,6 +471,52 @@ $$;
 grant execute on function public.promote_bought_items() to authenticated;
 
 -- ----------------------------------------------------------------------------
+--  RPC : renvoyer des produits de l'inventaire dans la liste.
+--
+--  Copie, pas déplacement : la ligne products reste en place — c'est ce qui
+--  fait de l'inventaire un catalogue réutilisable plutôt qu'une file d'attente.
+--  On saute les produits déjà dans la liste et pas encore achetés, pour la même
+--  raison qu'on dédoublonne l'inventaire : pas deux fois « Lait » à acheter.
+--  Sans quantité : elle se règle ensuite dans la liste, article par article.
+-- ----------------------------------------------------------------------------
+create or replace function public.add_products_to_list(p_product_ids uuid[])
+returns int
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_hh  uuid := public.current_household_id();
+  v_n   int := 0;
+begin
+  if v_uid is null then
+    raise exception 'Non authentifié';
+  end if;
+  if v_hh is null or p_product_ids is null then
+    return 0;
+  end if;
+
+  insert into public.items (household_id, name, added_by)
+  select v_hh, p.name, v_uid
+    from public.products p
+   where p.household_id = v_hh
+     and p.id = any(p_product_ids)
+     and not exists (
+       select 1
+         from public.items i
+        where i.household_id = v_hh
+          and i.bought_at is null
+          and public.product_key(i.name) = p.name_key
+     );
+
+  get diagnostics v_n = row_count;
+  return v_n;
+end;
+$$;
+grant execute on function public.add_products_to_list(uuid[]) to authenticated;
+
+-- ----------------------------------------------------------------------------
 --  Temps réel : diffuser les changements aux autres téléphones.
 --  (Idempotent : ne plante pas si la table est déjà publiée.)
 --
