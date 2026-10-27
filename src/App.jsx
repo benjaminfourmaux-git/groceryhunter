@@ -10,7 +10,7 @@ import Onboarding from './components/Onboarding'
 import Header from './components/Header'
 import AddBar from './components/AddBar'
 import ShoppingList from './components/ShoppingList'
-import History from './components/History'
+import Inventory from './components/Inventory'
 import StatsPanel from './components/StatsPanel'
 import BottomSheet from './components/BottomSheet'
 import Icon from './components/Icon'
@@ -31,9 +31,10 @@ export default function App() {
   const [selected, setSelected] = useState(() => new Set())
   const [invSort, setInvSort] = useState('rank') // rank | alpha
   const [now, setNow] = useState(() => Date.now()) // tick 1s : fait vivre les comptes à rebours
-  const [view, setView] = useState('list') // list | history
+  const [view, setView] = useState('list') // list | inventory
   const [pushState, setPushState] = useState('default')
   const [leaving, setLeaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false) // suppression multiple dans l'inventaire
   const [statsOpen, setStatsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // Le morph Réglages est « présent » de l'ouverture jusqu'à la FIN de la
@@ -100,7 +101,7 @@ export default function App() {
 
   // La sélection ne survit pas au changement d'onglet.
   useEffect(() => {
-    if (view !== 'history') setSelected((prev) => (prev.size ? new Set() : prev))
+    if (view !== 'inventory') setSelected((prev) => (prev.size ? new Set() : prev))
   }, [view])
 
   // Un produit supprimé par quelqu'un d'autre ne doit pas rester sélectionné :
@@ -234,7 +235,7 @@ export default function App() {
       moved = false
       pid = e.pointerId
       startX = e.clientX
-      startFrac = viewRef.current === 'history' ? 1 : 0
+      startFrac = viewRef.current === 'inventory' ? 1 : 0
       downTab = e.target.closest('.tab')
       ind.style.transition = 'none'
       place(startFrac)
@@ -257,14 +258,14 @@ export default function App() {
       const tabs = bar.querySelectorAll('.tab')
       const target = moved
         ? frac >= 0.5
-          ? 'history'
+          ? 'inventory'
           : 'list'
         : downTab === tabs[1]
-          ? 'history'
+          ? 'inventory'
           : 'list'
 
       ind.style.transition = ''
-      ind.style.transform = `translateX(${target === 'history' ? 100 : 0}%)`
+      ind.style.transform = `translateX(${target === 'inventory' ? 100 : 0}%)`
       if (target !== viewRef.current) setView(target)
       const done = () => {
         ind.style.transform = ''
@@ -377,6 +378,47 @@ export default function App() {
   }
 
   // ---- Actions liste --------------------------------------------------------
+  // ---- Les deux actions de la sélection dans l'inventaire -------------------
+
+  // Copie : les produits restent dans l'inventaire, et ceux qui sont déjà à
+  // acheter ne sont pas ajoutés deux fois (la RPC renvoie le compte réel). On
+  // ne change pas d'onglet : le bandeau et la pastille de la liste suffisent à
+  // dire que c'est parti, et on peut enchaîner plusieurs lots.
+  async function handleAddSelectedToList() {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    setSelected(new Set())
+    try {
+      skipItemsEchoUntil.current = Date.now() + 1500
+      const n = await api.addProductsToList(ids)
+      await loadItems(hid)
+      showToast(n > 0 ? t('inv_added', { n }) : t('inv_added_none'), n > 0 ? 'success' : 'info')
+    } catch (err) {
+      showToast(err.message || t('err_inv_add'), 'error')
+    }
+  }
+
+  // Un seul article part sans confirmation (la ligne disparaît sous le doigt,
+  // c'est lisible) ; au-delà, on demande — effacer vingt produits par mégarde
+  // ne se rattrape pas.
+  function askDeleteSelected() {
+    if (selected.size > 1) setConfirmDelete(true)
+    else handleDeleteSelected()
+  }
+
+  async function handleDeleteSelected() {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    setConfirmDelete(false)
+    setSelected(new Set())
+    try {
+      await api.deleteProducts(ids)
+      await loadProducts(hid)
+    } catch (err) {
+      showToast(err.message || t('err_inv_delete'), 'error')
+    }
+  }
+
   async function handleAdd(name, qty) {
     // Optimistic UI : on génère l'uuid côté client et on l'affiche avant la
     // confirmation serveur (même clé partout → pas de remontage ni double anim).
@@ -518,7 +560,7 @@ export default function App() {
             onDelete={handleDelete}
           />
         ) : (
-          <History
+          <Inventory
             products={products}
             memberById={memberById}
             selected={selected}
@@ -530,6 +572,20 @@ export default function App() {
 
       <div className="dock">
         {view === 'list' && <AddBar onAdd={handleAdd} />}
+
+        {/* À la place de la barre d'ajout, dès qu'un produit est coché. */}
+        {view === 'inventory' && selected.size > 0 && (
+          <div className="inv-actions">
+            <button type="button" className="btn-primary" onClick={handleAddSelectedToList}>
+              <Icon name="plus" size={18} />
+              {t('inv_to_list')}
+            </button>
+            <button type="button" className="btn-danger" onClick={askDeleteSelected}>
+              <Icon name="trash" size={18} />
+              {t('inv_delete')}
+            </button>
+          </div>
+        )}
 
         <nav className="tabbar" data-active={view} ref={tabbarRef}>
           <span className="tab-indicator" aria-hidden="true" ref={indicatorRef} />
@@ -546,16 +602,38 @@ export default function App() {
           </button>
           <button
             type="button"
-            className={'tab' + (view === 'history' ? ' active' : '')}
-            onClick={() => setView('history')}
+            className={'tab' + (view === 'inventory' ? ' active' : '')}
+            onClick={() => setView('inventory')}
           >
             <span className="tab-icon">
-              <Icon name="history" size={22} />
+              <Icon name="inventory" size={22} />
             </span>
-            <span>{t('tab_history')}</span>
+            <span>{t('tab_inventory')}</span>
           </button>
         </nav>
       </div>
+
+      {confirmDelete && (
+        <BottomSheet onClose={() => setConfirmDelete(false)}>
+          {(close) => (
+            <>
+              <span className="modal-emoji danger" aria-hidden="true">
+                <Icon name="trash" size={24} />
+              </span>
+              <h2>{t('inv_delete_title', { n: selected.size })}</h2>
+              <p className="muted">{t('inv_delete_body')}</p>
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost" onClick={close}>
+                  {t('cancel')}
+                </button>
+                <button type="button" className="btn-danger" onClick={handleDeleteSelected}>
+                  {t('inv_delete')}
+                </button>
+              </div>
+            </>
+          )}
+        </BottomSheet>
+      )}
 
       {leaving && (
         <BottomSheet onClose={() => setLeaving(false)}>

@@ -158,9 +158,14 @@ export async function promoteBoughtItems() {
 
 // Renvoie des produits dans la liste. Copie : la ligne d'inventaire reste en
 // place, et un produit déjà à acheter n'est pas ajouté une seconde fois.
+// Renvoie le nombre d'articles RÉELLEMENT créés : les produits déjà à acheter
+// sont sautés, et l'app doit pouvoir le dire (« déjà dans la liste »).
 export async function addProductsToList(productIds) {
-  const { error } = await supabase.rpc('add_products_to_list', { p_product_ids: productIds })
+  const { data, error } = await supabase.rpc('add_products_to_list', {
+    p_product_ids: productIds,
+  })
   if (error) throw error
+  return data ?? 0
 }
 
 // Suppression définitive dans l'inventaire (bouton de droite de la sélection).

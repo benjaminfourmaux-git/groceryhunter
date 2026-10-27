@@ -702,8 +702,28 @@ h2 {
   transform: translateX(calc(-1 * var(--swipe-reveal)));
 }
 
+/* ---------- Inventaire : les deux actions de la sélection ---------- */
+/* Elles prennent la place de la barre d'ajout dans le dock, donc juste
+   au-dessus des onglets, et n'apparaissent qu'avec au moins un produit coché. */
+.inv-actions {
+  display: flex;
+  gap: var(--space-2);
+  animation: item-in 0.3s var(--spring) both;
+}
+.inv-actions button {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 50px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
 /* ---------- Inventaire : les lignes de la liste, en plus fin ---------- */
-.hist-list {
+.inv-list {
   list-style: none;
   margin: 0;
   padding: 14px;
@@ -806,7 +826,7 @@ h2 {
   box-shadow: inset 0 1px 0 var(--specular), 0 6px 16px rgba(0, 0, 0, 0.3);
   transition: transform 0.42s var(--spring);
 }
-.tabbar[data-active='history'] .tab-indicator {
+.tabbar[data-active='inventory'] .tab-indicator {
   transform: translateX(100%);
 }
 .tab {

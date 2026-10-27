@@ -75,7 +75,7 @@ const fr = {
 
   // Onglets + boutons communs
   tab_list: 'Liste',
-  tab_history: 'Historique',
+  tab_inventory: 'Inventaire',
   cancel: 'Annuler',
   close: 'Fermer',
 
@@ -89,11 +89,19 @@ const fr = {
   push_https: 'Les notifications nécessitent une connexion sécurisée (HTTPS).',
   push_unsupported: 'Les notifications ne sont pas prises en charge sur cet appareil.',
 
-  // Historique
-  hist_empty_title: 'Rien acheté récemment',
-  hist_empty_body: 'Les articles cochés « acheté » restent ici un moment avant de disparaître.',
-  today_at: ({ time }) => `Aujourd’hui à ${time}`,
-  yesterday_at: ({ time }) => `Hier à ${time}`,
+  // Inventaire
+  inv_empty_title: 'Ton inventaire est vide',
+  inv_empty_body:
+    'Les articles que tu achètes viennent s’y ranger tout seuls, une heure après les courses.',
+  inv_to_list: 'Ajouter à la liste',
+  inv_delete: 'Supprimer',
+  inv_delete_title: ({ n }) => (n > 1 ? `Supprimer ${n} articles ?` : 'Supprimer cet article ?'),
+  inv_delete_body:
+    'Ils quittent l’inventaire pour de bon. Ce qui est déjà dans la liste ne bouge pas.',
+  inv_added: ({ n }) => (n > 1 ? `${n} articles ajoutés à la liste` : 'Ajouté à la liste'),
+  inv_added_none: 'Déjà dans la liste',
+  err_inv_add: 'Impossible d’ajouter à la liste.',
+  err_inv_delete: 'Suppression impossible.',
 
   // Écrans d'erreur
   err_config_title: 'Configuration manquante',
@@ -162,7 +170,7 @@ const en = {
   empty_body: 'Add what’s missing at home — everyone sees it right away.',
 
   tab_list: 'List',
-  tab_history: 'History',
+  tab_inventory: 'Inventory',
   cancel: 'Cancel',
   close: 'Close',
 
@@ -175,10 +183,16 @@ const en = {
   push_https: 'Notifications require a secure (HTTPS) connection.',
   push_unsupported: 'Notifications aren’t supported on this device.',
 
-  hist_empty_title: 'Nothing bought recently',
-  hist_empty_body: 'Items you check off stay here for a while before disappearing.',
-  today_at: ({ time }) => `Today at ${time}`,
-  yesterday_at: ({ time }) => `Yesterday at ${time}`,
+  inv_empty_title: 'Your inventory is empty',
+  inv_empty_body: 'Everything you buy lands here by itself, an hour after the shop.',
+  inv_to_list: 'Add to list',
+  inv_delete: 'Delete',
+  inv_delete_title: ({ n }) => (n > 1 ? `Delete ${n} items?` : 'Delete this item?'),
+  inv_delete_body: 'They leave the inventory for good. Whatever is already on the list stays put.',
+  inv_added: ({ n }) => (n > 1 ? `${n} items added to the list` : 'Added to the list'),
+  inv_added_none: 'Already on the list',
+  err_inv_add: 'Couldn’t add to the list.',
+  err_inv_delete: 'Couldn’t delete.',
 
   err_config_title: 'Missing configuration',
   err_config_body:
