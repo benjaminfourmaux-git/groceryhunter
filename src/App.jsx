@@ -4,7 +4,7 @@ import * as api from './lib/api'
 import { enablePush, pushSupported, pushPermission, pushUnsupportedReason } from './lib/push'
 import { initPress } from './lib/press'
 import { uuid } from './lib/uuid'
-import { T1_MS, T2_MS } from './lib/config'
+import { T1_MS } from './lib/config'
 import { useLang } from './lib/i18n'
 import Onboarding from './components/Onboarding'
 import Header from './components/Header'
@@ -25,6 +25,7 @@ export default function App() {
   const [member, setMember] = useState(null)
   const [members, setMembers] = useState([])
   const [items, setItems] = useState([])
+  const [products, setProducts] = useState([]) // l'inventaire : un produit distinct par ligne
   const [now, setNow] = useState(() => Date.now()) // tick 1s : fait vivre les comptes à rebours
   const [view, setView] = useState('list') // list | history
   const [pushState, setPushState] = useState('default')
@@ -43,7 +44,7 @@ export default function App() {
   // Après une mutation locale sur les articles, on a déjà rechargé la liste :
   // on ignore l'écho temps réel (qui arrive plus tard) pour éviter un 2e rendu.
   const skipItemsEchoUntil = useRef(0)
-  const cleaning = useRef(false)
+  const promoting = useRef(false)
   const settingsBtnRef = useRef(null) // ancre du « morph » Réglages (le bouton ⋯)
   const tabbarRef = useRef(null)
   const indicatorRef = useRef(null)
@@ -68,18 +69,6 @@ export default function App() {
     return [...toBuy, ...counting]
   }, [items, now])
 
-  // Historique = achetés depuis ≥ T1 mais < T1+T2.
-  const historyItems = useMemo(
-    () =>
-      items
-        .filter((it) => {
-          const b = boughtMsOf(it)
-          return b != null && now - b >= T1_MS && now - b < T1_MS + T2_MS
-        })
-        .sort((a, b) => boughtMsOf(b) - boughtMsOf(a)),
-    [items, now]
-  )
-
   const toBuyCount = useMemo(() => items.reduce((n, it) => n + (it.bought_at ? 0 : 1), 0), [items])
 
   const showToast = useCallback((msg, kind = 'info') => {
@@ -92,6 +81,9 @@ export default function App() {
   }, [])
   const loadMembers = useCallback(async (h) => {
     setMembers(await api.getMembers(h))
+  }, [])
+  const loadProducts = useCallback(async (h) => {
+    setProducts(await api.getProducts(h))
   }, [])
 
   // Effet « press organique » sur tous les boutons (une seule fois).
@@ -168,33 +160,26 @@ export default function App() {
     if (member?.id) api.setMemberLang(lang)
   }, [lang, member])
 
-  // Nettoyage paresseux : supprime en base les articles achetés depuis > T1+T2
-  // (déjà invisibles, filtrés des deux vues). Pur entretien, sans infra serveur.
+  // Promotion paresseuse : une heure après l'achat, l'article quitte la liste
+  // pour l'inventaire. Rien n'est écrit avant — c'est ce qui permet de décocher
+  // sans laisser de trace. Déclenché par le tick, comme l'ancien nettoyage.
   useEffect(() => {
-    if (!hid || cleaning.current) return
-    const cutoffMs = Date.now() - (T1_MS + T2_MS)
-    const hasExpired = items.some((it) => {
+    if (!hid || promoting.current) return
+    const hasRipe = items.some((it) => {
       const b = boughtMsOf(it)
-      return b != null && b < cutoffMs
+      return b != null && now - b >= T1_MS
     })
-    if (!hasExpired) return
-    cleaning.current = true
+    if (!hasRipe) return
+    promoting.current = true
     skipItemsEchoUntil.current = Date.now() + 2000
     api
-      .cleanupExpired(hid, new Date(cutoffMs).toISOString())
-      .then(() =>
-        setItems((prev) =>
-          prev.filter((it) => {
-            const b = boughtMsOf(it)
-            return !(b != null && b < Date.now() - (T1_MS + T2_MS))
-          })
-        )
-      )
+      .promoteBoughtItems()
+      .then(() => Promise.all([loadItems(hid), loadProducts(hid)]))
       .catch(() => {})
       .finally(() => {
-        cleaning.current = false
+        promoting.current = false
       })
-  }, [now, items, hid])
+  }, [now, items, hid, loadItems, loadProducts])
 
   // Slide Liste/Historique : maintien + déplacement linéaire, aimant au relâchement.
   useEffect(() => {
@@ -308,6 +293,7 @@ export default function App() {
 
     loadItems(h)
     loadMembers(h)
+    loadProducts(h)
 
     if (!pushSupported()) {
       setPushState('unsupported')
@@ -333,6 +319,11 @@ export default function App() {
         { event: '*', schema: 'public', table: 'members', filter: `household_id=eq.${h}` },
         () => loadMembers(h) // compteur d'achats mis à jour → classement en direct
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products', filter: `household_id=eq.${h}` },
+        () => loadProducts(h) // promotion ou suppression chez quelqu'un d'autre
+      )
       .subscribe()
 
     channelRef.current = channel
@@ -340,7 +331,7 @@ export default function App() {
       supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [member, loadItems, loadMembers])
+  }, [member, loadItems, loadMembers, loadProducts])
 
   // ---- Actions d'onboarding -------------------------------------------------
   async function handleCreate(householdName, displayName, color) {
@@ -498,7 +489,7 @@ export default function App() {
             onDelete={handleDelete}
           />
         ) : (
-          <History items={historyItems} memberById={memberById} />
+          <History products={products} memberById={memberById} />
         )}
       </main>
 
