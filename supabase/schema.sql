@@ -88,20 +88,14 @@ create index if not exists products_household_idx on public.products(household_i
 create unique index if not exists products_name_key_idx
   on public.products(household_id, name_key);
 
--- L'historique : une entrée par sortie « courses faites ».
-create table if not exists public.shopping_trips (
-  id            uuid primary key default gen_random_uuid(),
-  household_id  uuid not null references public.households(id) on delete cascade,
-  shopper_id    uuid references public.members(id) on delete set null,
-  shopper_name  text not null,
-  items         jsonb not null default '[]'::jsonb,
-  item_count    int not null default 0,
-  price         numeric,
-  created_at    timestamptz not null default now()
-);
-create index if not exists trips_household_idx on public.shopping_trips(household_id);
--- Migration : ajoute le prix (facultatif) aux bases déjà créées.
-alter table public.shopping_trips add column if not exists price numeric;
+-- shopping_trips (« une entrée par sortie courses faites ») est retirée : plus
+-- aucun code ne la lit ni ne l'écrit depuis la disparition du bouton « courses
+-- faites ». Elle n'est plus créée sur les nouvelles bases ; sur les bases
+-- existantes elle reste en place, inerte, car la supprimer effacerait pour de
+-- bon les sorties déjà enregistrées. À exécuter à la main, en connaissance de
+-- cause, quand ces données ne servent plus :
+--
+--   drop table if exists public.shopping_trips cascade;
 
 -- Abonnements Web Push (un par navigateur/appareil).
 create table if not exists public.push_subscriptions (
@@ -136,7 +130,6 @@ alter table public.households          enable row level security;
 alter table public.members             enable row level security;
 alter table public.items               enable row level security;
 alter table public.products            enable row level security;
-alter table public.shopping_trips      enable row level security;
 alter table public.push_subscriptions  enable row level security;
 
 drop policy if exists households_select on public.households;
@@ -172,29 +165,6 @@ create policy products_select on public.products
 
 drop policy if exists products_delete on public.products;
 create policy products_delete on public.products
-  for delete to authenticated
-  using (household_id = public.current_household_id());
-
-drop policy if exists trips_select on public.shopping_trips;
-create policy trips_select on public.shopping_trips
-  for select to authenticated
-  using (household_id = public.current_household_id());
-
-drop policy if exists trips_insert on public.shopping_trips;
-create policy trips_insert on public.shopping_trips
-  for insert to authenticated
-  with check (household_id = public.current_household_id());
-
--- Édition d'une sortie (ex. corriger le prix) par les membres du foyer.
-drop policy if exists trips_update on public.shopping_trips;
-create policy trips_update on public.shopping_trips
-  for update to authenticated
-  using (household_id = public.current_household_id())
-  with check (household_id = public.current_household_id());
-
--- Suppression d'une sortie (swipe dans l'historique) par les membres du foyer.
-drop policy if exists trips_delete on public.shopping_trips;
-create policy trips_delete on public.shopping_trips
   for delete to authenticated
   using (household_id = public.current_household_id());
 
@@ -535,10 +505,6 @@ exception when duplicate_object then null; end $$;
 
 do $$ begin
   alter publication supabase_realtime add table public.products;
-exception when duplicate_object then null; end $$;
-
-do $$ begin
-  alter publication supabase_realtime add table public.shopping_trips;
 exception when duplicate_object then null; end $$;
 
 do $$ begin
