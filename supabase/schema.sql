@@ -53,6 +53,39 @@ create index if not exists items_household_idx on public.items(household_id);
 alter table public.items add column if not exists bought_at timestamptz;
 alter table public.items add column if not exists bought_by uuid references public.members(id) on delete set null;
 
+-- L'inventaire du foyer : UNE ligne par produit distinct, pas par achat.
+-- Alimenté à la promotion d'un article acheté (cf. promote_bought_items), il
+-- devient le contenu de l'onglet « Historique » : on y repioche sans retaper.
+--   name     → l'orthographe d'origine, telle qu'elle s'affiche.
+--   name_key → la même, normalisée : c'est elle qui dédoublonne, pour que
+--              « Pâtes », « pates » et « PATES » soient un seul produit.
+--   score    → frécence (cf. promote_bought_items). Sert UNIQUEMENT au tri.
+create extension if not exists unaccent with schema extensions;
+
+create or replace function public.product_key(p_name text)
+returns text
+language sql
+stable
+set search_path = public, extensions
+as $$
+  select regexp_replace(lower(trim(unaccent(coalesce(p_name, '')))), '\s+', ' ', 'g')
+$$;
+
+create table if not exists public.products (
+  id              uuid primary key default gen_random_uuid(),
+  household_id    uuid not null references public.households(id) on delete cascade,
+  name            text not null,
+  name_key        text not null,
+  score           numeric not null default 0,
+  last_bought_at  timestamptz,
+  last_bought_by  uuid references public.members(id) on delete set null,
+  created_at      timestamptz not null default now()
+);
+create index if not exists products_household_idx on public.products(household_id);
+-- Le dédoublonnage garanti en base : un produit n'entre pas deux fois.
+create unique index if not exists products_name_key_idx
+  on public.products(household_id, name_key);
+
 -- L'historique : une entrée par sortie « courses faites ».
 create table if not exists public.shopping_trips (
   id            uuid primary key default gen_random_uuid(),
@@ -100,6 +133,7 @@ $$;
 alter table public.households          enable row level security;
 alter table public.members             enable row level security;
 alter table public.items               enable row level security;
+alter table public.products            enable row level security;
 alter table public.shopping_trips      enable row level security;
 alter table public.push_subscriptions  enable row level security;
 
@@ -124,6 +158,20 @@ create policy items_all on public.items
   for all to authenticated
   using (household_id = public.current_household_id())
   with check (household_id = public.current_household_id());
+
+-- L'inventaire se lit et se supprime depuis le client (sélection + bouton
+-- Supprimer). Les écritures — création d'un produit et calcul du score — ne
+-- passent que par promote_bought_items, en SECURITY DEFINER : aucune politique
+-- d'insert ni d'update, pour qu'un client ne puisse pas fabriquer un score.
+drop policy if exists products_select on public.products;
+create policy products_select on public.products
+  for select to authenticated
+  using (household_id = public.current_household_id());
+
+drop policy if exists products_delete on public.products;
+create policy products_delete on public.products
+  for delete to authenticated
+  using (household_id = public.current_household_id());
 
 drop policy if exists trips_select on public.shopping_trips;
 create policy trips_select on public.shopping_trips
@@ -351,9 +399,14 @@ grant execute on function public.keepalive() to anon, authenticated;
 --  Avec FULL, l'ancienne ligne complète est incluse et le filtre s'applique.
 -- ----------------------------------------------------------------------------
 alter table public.items replica identity full;
+alter table public.products replica identity full;
 
 do $$ begin
   alter publication supabase_realtime add table public.items;
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  alter publication supabase_realtime add table public.products;
 exception when duplicate_object then null; end $$;
 
 do $$ begin
