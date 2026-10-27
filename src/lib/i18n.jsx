@@ -93,6 +93,9 @@ const fr = {
   inv_empty_title: 'Ton inventaire est vide',
   inv_empty_body:
     'Les articles que tu achètes viennent s’y ranger tout seuls, une heure après les courses.',
+  inv_sort: 'Trier l’inventaire',
+  inv_sort_rank: 'Les plus achetés',
+  inv_sort_alpha: 'A → Z',
   inv_to_list: 'Ajouter à la liste',
   inv_delete: 'Supprimer',
   inv_delete_title: ({ n }) => (n > 1 ? `Supprimer ${n} articles ?` : 'Supprimer cet article ?'),
@@ -185,6 +188,9 @@ const en = {
 
   inv_empty_title: 'Your inventory is empty',
   inv_empty_body: 'Everything you buy lands here by itself, an hour after the shop.',
+  inv_sort: 'Sort the inventory',
+  inv_sort_rank: 'Most bought',
+  inv_sort_alpha: 'A → Z',
   inv_to_list: 'Add to list',
   inv_delete: 'Delete',
   inv_delete_title: ({ n }) => (n > 1 ? `Delete ${n} items?` : 'Delete this item?'),

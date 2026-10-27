@@ -29,7 +29,17 @@ export default function App() {
   // Sélection dans l'inventaire : locale et non synchronisée, pour que deux
   // membres puissent cocher en même temps sans se gêner.
   const [selected, setSelected] = useState(() => new Set())
-  const [invSort, setInvSort] = useState('rank') // rank | alpha
+  // Tri de l'inventaire, retenu d'une session à l'autre : un réglage qui se
+  // remet à zéro à chaque lancement agace plus qu'il ne sert.
+  const [invSort, setInvSort] = useState(() => {
+    try {
+      const saved = localStorage.getItem('invSort')
+      if (saved === 'rank' || saved === 'alpha') return saved
+    } catch {
+      /* noop */
+    }
+    return 'rank'
+  })
   const [now, setNow] = useState(() => Date.now()) // tick 1s : fait vivre les comptes à rebours
   const [view, setView] = useState('list') // list | inventory
   const [pushState, setPushState] = useState('default')
@@ -98,6 +108,14 @@ export default function App() {
       return next
     })
   }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('invSort', invSort)
+    } catch {
+      /* noop */
+    }
+  }, [invSort])
 
   // La sélection ne survit pas au changement d'onglet.
   useEffect(() => {
@@ -566,6 +584,7 @@ export default function App() {
             selected={selected}
             onToggleSelected={toggleSelected}
             sort={invSort}
+            onSortChange={setInvSort}
           />
         )}
       </main>

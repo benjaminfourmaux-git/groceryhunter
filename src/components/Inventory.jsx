@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import Icon from './Icon'
 import Avatar from './Avatar'
 import CheckDot from './CheckDot'
-import { orderProducts } from '../lib/inventory'
+import { orderProducts, SORT_ALPHA, SORT_RANK } from '../lib/inventory'
 import { useLang } from '../lib/i18n'
 
 // L'inventaire du foyer : un produit distinct par ligne, rempli par les achats
@@ -13,7 +13,14 @@ import { useLang } from '../lib/i18n'
 // ici ne veut pas dire « acheté » mais « sélectionné » : les produits cochés
 // remontent en tête, et deux boutons apparaissent dans le dock. L'avatar est
 // celui du DERNIER acheteur.
-export default function Inventory({ products, memberById, selected, onToggleSelected, sort }) {
+export default function Inventory({
+  products,
+  memberById,
+  selected,
+  onToggleSelected,
+  sort,
+  onSortChange,
+}) {
   const { t } = useLang()
   const ordered = useMemo(() => orderProducts(products, { selected, sort }), [products, selected, sort])
 
@@ -30,7 +37,29 @@ export default function Inventory({ products, memberById, selected, onToggleSele
   }
 
   return (
-    <ul className="inv-list">
+    <>
+      {/* Deux tris : l'habitude du foyer, ou l'ordre alphabétique pour
+          retrouver un produit précis. */}
+      <div className="inv-sort" role="group" aria-label={t('inv_sort')}>
+        <button
+          type="button"
+          className={sort === SORT_RANK ? 'on' : ''}
+          aria-pressed={sort === SORT_RANK}
+          onClick={() => onSortChange(SORT_RANK)}
+        >
+          {t('inv_sort_rank')}
+        </button>
+        <button
+          type="button"
+          className={sort === SORT_ALPHA ? 'on' : ''}
+          aria-pressed={sort === SORT_ALPHA}
+          onClick={() => onSortChange(SORT_ALPHA)}
+        >
+          {t('inv_sort_alpha')}
+        </button>
+      </div>
+
+      <ul className="inv-list">
       {ordered.map((p) => {
         const buyer = memberById[p.last_bought_by]
         const isOn = selected.has(p.id)
@@ -49,6 +78,7 @@ export default function Inventory({ products, memberById, selected, onToggleSele
           </li>
         )
       })}
-    </ul>
+      </ul>
+    </>
   )
 }

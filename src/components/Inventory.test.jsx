@@ -24,6 +24,7 @@ function monter(props = {}) {
         memberById={MEMBRES}
         selected={new Set()}
         sort="rank"
+        onSortChange={props.onSortChange ?? (() => {})}
         {...props}
         onToggleSelected={onToggleSelected}
       />
@@ -77,5 +78,26 @@ describe('Inventory', () => {
   it('suit le tri alphabétique quand il est demandé', () => {
     monter({ sort: 'alpha' })
     expect(lignes()).toEqual(['Café', 'Lait', 'Pain'])
+  })
+
+  it('montre quel tri est actif', () => {
+    monter({ sort: 'alpha' })
+    expect(screen.getByRole('button', { name: 'A → Z' })).toHaveProperty('ariaPressed', 'true')
+    expect(screen.getByRole('button', { name: 'Les plus achetés' })).toHaveProperty(
+      'ariaPressed',
+      'false'
+    )
+  })
+
+  it('demande le changement de tri', async () => {
+    const onSortChange = vi.fn()
+    monter({ sort: 'rank', onSortChange })
+    await userEvent.setup().click(screen.getByRole('button', { name: 'A → Z' }))
+    expect(onSortChange).toHaveBeenCalledWith('alpha')
+  })
+
+  it('cache le choix du tri quand il n’y a rien à trier', () => {
+    monter({ products: [] })
+    expect(screen.queryByRole('group', { name: 'Trier l’inventaire' })).toBeNull()
   })
 })

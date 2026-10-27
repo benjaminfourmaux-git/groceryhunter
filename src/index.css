@@ -702,6 +702,30 @@ h2 {
   transform: translateX(calc(-1 * var(--swipe-reveal)));
 }
 
+/* ---------- Inventaire : le choix du tri ---------- */
+.inv-sort {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 12px 16px 0;
+}
+.inv-sort button {
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: var(--pill);
+  cursor: pointer;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+.inv-sort button.on {
+  color: var(--brand-ink);
+  background: var(--brand-2);
+}
+
 /* ---------- Inventaire : les deux actions de la sélection ---------- */
 /* Elles prennent la place de la barre d'ajout dans le dock, donc juste
    au-dessus des onglets, et n'apparaissent qu'avec au moins un produit coché. */
