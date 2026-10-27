@@ -131,17 +131,40 @@ export async function deleteItem(id) {
   if (error) throw error
 }
 
-// Nettoyage paresseux : supprime les articles achetés depuis plus de T1+T2
-// (expirés de l'historique). Appelé par le client à l'ouverture / au fil du temps.
-export async function cleanupExpired(householdId, cutoffIso) {
-  const { error } = await supabase
-    .from('items')
-    .delete()
+// --- Inventaire --------------------------------------------------------------
+
+// L'inventaire du foyer : un produit distinct par ligne, alimenté par la
+// promotion des articles achetés. Il ne se vide plus tout seul — c'est la
+// sélection + le bouton Supprimer qui le nettoient.
+export async function getProducts(householdId) {
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, name, score, last_bought_at, last_bought_by')
     .eq('household_id', householdId)
-    .lt('bought_at', cutoffIso)
+    .order('score', { ascending: false })
+    .order('name', { ascending: true })
+  if (error) throw error
+  return data ?? []
+}
+
+// Promotion paresseuse : les articles achetés depuis plus d'une heure quittent
+// la liste et rejoignent l'inventaire. Remplace l'ancien nettoyage par
+// expiration ; le délai et le calcul du score sont tenus côté serveur, pour
+// qu'un client ne puisse ni précipiter la promotion ni fabriquer un score.
+export async function promoteBoughtItems() {
+  const { error } = await supabase.rpc('promote_bought_items')
   if (error) throw error
 }
 
-// L'historique n'a plus de table dédiée : il est dérivé des `items` achetés
-// (bought_at entre T1 et T1+T2) côté client. L'ancien flux « sorties »
-// (shopping_trips, go-shopping, prix) est retiré.
+// Renvoie des produits dans la liste. Copie : la ligne d'inventaire reste en
+// place, et un produit déjà à acheter n'est pas ajouté une seconde fois.
+export async function addProductsToList(productIds) {
+  const { error } = await supabase.rpc('add_products_to_list', { p_product_ids: productIds })
+  if (error) throw error
+}
+
+// Suppression définitive dans l'inventaire (bouton de droite de la sélection).
+export async function deleteProducts(productIds) {
+  const { error } = await supabase.from('products').delete().in('id', productIds)
+  if (error) throw error
+}

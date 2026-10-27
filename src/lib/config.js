@@ -1,7 +1,12 @@
 // Cycle de vie d'un article coché « acheté » :
-//   coché → reste dans la liste (compte à rebours) pendant T1 → part dans
-//   l'historique pendant T2 → suppression définitive.
+//   coché → reste dans la liste pendant T1 (compte à rebours, pour qu'un
+//   décochage ne laisse aucune trace) → promu dans l'inventaire (table
+//   `products`) et retiré de la liste.
 //
-// Pour tester rapidement, mettre par exemple T1 = 10 s et T2 = 20 s.
-export const T1_MS = 60 * 60 * 1000 // 1 h : délai avant qu'un article acheté quitte la liste → historique
-export const T2_MS = 48 * 60 * 60 * 1000 // 48 h : rétention dans l'historique avant suppression définitive
+// T1 pilote ici l'affichage : l'anneau de compte à rebours et la partition
+// liste / inventaire. Le délai qui FAIT FOI pour la promotion est celui de
+// `promote_bought_items` (supabase/schema.sql) — les deux doivent rester
+// d'accord, et c'est le serveur qui tranche.
+//
+// Pour tester rapidement, mettre T1 à 10 s ici ET dans la RPC.
+export const T1_MS = 60 * 60 * 1000 // 1 h
