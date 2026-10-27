@@ -5,9 +5,10 @@ Bienvenue ! Ce guide est écrit pour **une personne qui n'a jamais codé**. On v
 l'avance : il suffit de suivre les étapes dans l'ordre.
 
 À la fin, tu auras une **application de liste de courses** installée sur les téléphones de la
-maison. Tout le monde voit la même liste, en temps réel. Quand quelqu'un part faire les courses,
-il appuie sur un bouton : la liste se vide, passe dans l'historique, et les autres reçoivent une
-notification.
+maison. Tout le monde voit la même liste, en temps réel. En magasin, on coche ce qu'on prend :
+l'article se barre, puis quitte la liste une heure plus tard pour aller se ranger dans
+l'**inventaire** du foyer — la liste de ce qu'on achète d'habitude. La fois suivante, on y coche
+ce qu'il faut racheter et tout repart dans la liste, sans rien retaper.
 
 - ⏱️ Compte environ **45 minutes** la première fois.
 - 💳 C'est **entièrement gratuit**, sans carte bancaire.
@@ -361,8 +362,9 @@ L'app s'installe **depuis le navigateur**, sans passer par un store. Utilise l'a
    À faire **sur chaque téléphone**.
 
 ✅ **Vérification finale** : depuis un téléphone, ajoute un article → il apparaît sur les autres.
-Appuie sur **« Je pars faire les courses »** → la liste se vide, passe dans l'**Historique**, et
-les autres téléphones reçoivent une **notification**. 🎉 Bravo, tout est en place !
+Coche-le → il se barre et descend en bas de la liste. Une heure plus tard il la quitte pour
+l'onglet **Inventaire**, d'où on peut le remettre dans la liste en deux gestes : cocher, puis
+**Ajouter à la liste**. 🎉 Bravo, tout est en place !
 
 ---
 
@@ -417,7 +419,16 @@ node -v        # vérifier que Node.js est installé (doit afficher v20 ou plus)
 npm install    # installer les composants (une seule fois, au début)
 npm run dev    # lancer l'app en local pour la tester (Ctrl + C pour arrêter)
 npm run build  # fabriquer la version finale (dossier dist/) à mettre en ligne
+npm test       # vérifier la logique de l'app (tri de l'inventaire, écrans)
+npm run test:sql  # vérifier le schéma de la base (demande PostgreSQL installé)
 ```
+
+> 🧪 **Les deux bancs de test.** `npm test` vérifie le code de l'app sans rien installer.
+> `npm run test:sql` monte un PostgreSQL **jetable** sur ta machine, y joue
+> `supabase/schema.sql` tel quel et contrôle que l'inventaire se comporte comme prévu —
+> la promotion au bout d'une heure, le dédoublonnage, le classement, l'isolation entre
+> foyers. Il ne touche **jamais** ta base Supabase. Sans PostgreSQL installé en local,
+> il le dit et s'arrête : ce n'est pas grave, `npm test` suffit au quotidien.
 
 ---
 
@@ -434,7 +445,7 @@ liste-courses/
 ├── src/                    # le code de l'application visible
 │   ├── App.jsx             # logique principale
 │   ├── index.css           # apparence (style type Tricount)
-│   ├── components/         # les morceaux d'écran (liste, historique, etc.)
+│   ├── components/         # les morceaux d'écran (liste, inventaire, etc.)
 │   └── lib/                # connexion Supabase, notifications
 └── supabase/
     └── schema.sql          # à exécuter dans Supabase (étape 2.3)
