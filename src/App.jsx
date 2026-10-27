@@ -437,6 +437,22 @@ export default function App() {
     }
   }
 
+  // Quantité modifiable après coup : les articles venus de l'inventaire
+  // arrivent sans quantité, et c'est dans la liste qu'on la règle.
+  async function handleSetQuantity(id, raw) {
+    const q = raw && raw.trim() ? raw.trim() : null
+    const before = items.find((it) => it.id === id)?.quantity ?? null
+    if (q === before) return // rien à écrire : le champ a été ouvert puis refermé
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, quantity: q } : it)))
+    try {
+      skipItemsEchoUntil.current = Date.now() + 1500
+      await api.setItemQuantity(id, q)
+    } catch (err) {
+      setItems((prev) => prev.map((it) => (it.id === id ? { ...it, quantity: before } : it)))
+      showToast(err.message || t('err_action'), 'error')
+    }
+  }
+
   async function handleAdd(name, qty) {
     // Optimistic UI : on génère l'uuid côté client et on l'affiche avant la
     // confirmation serveur (même clé partout → pas de remontage ni double anim).
@@ -576,6 +592,7 @@ export default function App() {
             memberById={memberById}
             onToggleBought={handleToggleBought}
             onDelete={handleDelete}
+            onSetQuantity={handleSetQuantity}
           />
         ) : (
           <Inventory

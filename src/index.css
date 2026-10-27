@@ -634,9 +634,46 @@ h2 {
   color: var(--brand-text);
   font-size: var(--fs-sm);
   font-weight: 800;
+  font-family: inherit;
   padding: 4px 11px;
   border-radius: var(--pill);
   border: 1px solid rgba(70, 160, 44, 0.24);
+}
+button.qty-badge {
+  cursor: pointer;
+}
+
+/* Le nom ouvre l'édition de la quantité : c'est un vrai bouton, mais il ne
+   doit rien changer à l'allure de la ligne. */
+.item-name-btn {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.item-name-btn:disabled {
+  cursor: default;
+}
+/* Jamais sous 16 px : en dessous, iOS zoome à la mise au point. */
+.qty-edit input {
+  width: 92px;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--brand-text);
+  text-align: center;
+  background: var(--glass-2);
+  border: 1px solid var(--brand);
+  border-radius: var(--pill);
+  padding: 4px 8px;
+  outline: none;
 }
 
 /* ---------- Swipe-to-delete ---------- */

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Icon from './Icon'
 import Avatar from './Avatar'
 import CheckDot from './CheckDot'
@@ -12,11 +12,30 @@ const FLICK_MIN_DX = 24 // mais il faut un déplacement minimal, pour éviter le
 
 // Chaque ligne gère son propre swipe (suppression). Glisser au-delà du seuil =
 // suppression ; en deçà, la ligne revient. Un tap sur la case coche l'article.
-function SwipeRow({ it, now, adder, onToggleBought, onDelete, t }) {
+function SwipeRow({ it, now, adder, onToggleBought, onDelete, onSetQuantity, t }) {
   const rowRef = useRef(null)
   const fgRef = useRef(null)
   const drag = useRef(null)
   const removing = useRef(false)
+  const qtyRef = useRef(null)
+  const [editing, setEditing] = useState(false)
+
+  // Le champ s'ouvre déjà rempli et sélectionné : on remplace une quantité plus
+  // souvent qu'on ne la complète.
+  useEffect(() => {
+    if (!editing) return
+    const el = qtyRef.current
+    if (!el) return
+    el.focus()
+    el.select()
+  }, [editing])
+
+  function commitQuantity() {
+    if (!editing) return
+    const value = qtyRef.current?.value ?? ''
+    setEditing(false)
+    onSetQuantity(it.id, value)
+  }
 
   const bought = !!it.bought_at
   const boughtMs = bought ? Date.parse(it.bought_at) : 0
@@ -24,7 +43,8 @@ function SwipeRow({ it, now, adder, onToggleBought, onDelete, t }) {
 
   function down(e) {
     if (removing.current) return
-    if (e.target.closest('.buy-check')) return // la case ne lance jamais de glissé
+    // Ni la case, ni le nom, ni le champ de quantité ne lancent de glissé.
+    if (e.target.closest('.buy-check, .item-name-btn, .qty-edit, .qty-badge')) return
     drag.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -129,9 +149,50 @@ function SwipeRow({ it, now, adder, onToggleBought, onDelete, t }) {
       >
         <div className="item-main">
           {adder && <Avatar name={adder.display_name} color={adder.color} size={24} />}
-          <span className="item-name">{it.name}</span>
+          {/* Le nom ouvre l'édition de la quantité : les articles venus de
+              l'inventaire arrivent sans quantité, donc sans pastille à viser.
+              Un article déjà acheté n'est plus modifiable — il est en partance. */}
+          <button
+            type="button"
+            className="item-name-btn"
+            onClick={() => setEditing(true)}
+            disabled={bought}
+            aria-label={t('aria_edit_qty', { name: it.name })}
+          >
+            <span className="item-name">{it.name}</span>
+          </button>
         </div>
-        {it.quantity && <span className="qty-badge">{it.quantity}</span>}
+        {editing ? (
+          <form
+            className="qty-edit"
+            onSubmit={(e) => {
+              e.preventDefault()
+              commitQuantity()
+            }}
+          >
+            <input
+              ref={qtyRef}
+              type="text"
+              defaultValue={it.quantity ?? ''}
+              placeholder={t('qty_ph')}
+              maxLength={12}
+              aria-label={t('aria_qty')}
+              onBlur={commitQuantity}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.preventDefault()
+                  setEditing(false) // annule : onBlur ne doit plus rien valider
+                }
+              }}
+            />
+          </form>
+        ) : (
+          it.quantity && (
+            <button type="button" className="qty-badge" onClick={() => setEditing(true)}>
+              {it.quantity}
+            </button>
+          )
+        )}
         <CheckDot
           checked={bought}
           fraction={fraction}
@@ -144,7 +205,14 @@ function SwipeRow({ it, now, adder, onToggleBought, onDelete, t }) {
   )
 }
 
-export default function ShoppingList({ items, now, memberById, onToggleBought, onDelete }) {
+export default function ShoppingList({
+  items,
+  now,
+  memberById,
+  onToggleBought,
+  onDelete,
+  onSetQuantity,
+}) {
   const { t } = useLang()
 
   // FLIP : quand un article est acheté il descend en bas ; les autres glissent.
@@ -211,6 +279,7 @@ export default function ShoppingList({ items, now, memberById, onToggleBought, o
             adder={memberById[it.added_by]}
             onToggleBought={onToggleBought}
             onDelete={onDelete}
+            onSetQuantity={onSetQuantity}
             t={t}
           />
         ))}

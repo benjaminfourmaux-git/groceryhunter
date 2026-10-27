@@ -126,6 +126,15 @@ export async function setItemBought(id, bought) {
   if (error) throw error
 }
 
+// Quantité d'un article déjà dans la liste : vide → null, pour que la pastille
+// disparaisse au lieu d'afficher une chaîne vide.
+export async function setItemQuantity(id, quantity) {
+  const q = quantity && quantity.trim() ? quantity.trim() : null
+  const { error } = await supabase.from('items').update({ quantity: q }).eq('id', id)
+  if (error) throw error
+  return q
+}
+
 export async function deleteItem(id) {
   const { error } = await supabase.from('items').delete().eq('id', id)
   if (error) throw error
