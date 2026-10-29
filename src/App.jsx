@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { supabase, isConfigured } from './supabaseClient'
 import * as api from './lib/api'
 import { enablePush, pushSupported, pushPermission, pushUnsupportedReason } from './lib/push'
-import { initPress } from './lib/press'
 import { uuid } from './lib/uuid'
 import { T1_MS } from './lib/config'
 import { useLang } from './lib/i18n'
@@ -134,10 +133,7 @@ export default function App() {
     })
   }, [products])
 
-  // Effet « press organique » sur tous les boutons (une seule fois).
-  useEffect(() => initPress(), [])
-
-  // Tick 1s : comptes à rebours + bascule liste↔historique quand T1/T2 passent.
+  // Tick 1s : fait vivre les comptes à rebours et déclenche la promotion à T1.
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(id)
