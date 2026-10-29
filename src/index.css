@@ -1045,7 +1045,9 @@ button.qty-badge {
 
 /* Les deux actions de la sélection. Elles prennent la place de la barre
    d'ajout dans le dock, donc juste au-dessus des onglets, et n'apparaissent
-   qu'avec au moins un produit coché. */
+   qu'avec au moins un produit coché. Pilules de la hauteur de la barre
+   d'ajout : « Supprimer » en retrait à gauche, « Ajouter à la liste » en vert
+   à droite, là où se trouve le + dans l'onglet Liste. */
 .inv-actions {
   display: flex;
   gap: var(--space-2);
@@ -1057,9 +1059,34 @@ button.qty-badge {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  height: 50px;
+  height: 52px;
   padding: 0 12px;
+  border: none;
+  border-radius: var(--pill);
+  font-size: var(--fs-md);
+  font-weight: 700;
   white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.18s var(--spring), box-shadow 0.2s var(--ease);
+}
+.inv-actions button svg {
+  flex: none;
+}
+.inv-actions button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.inv-actions .inv-delete {
+  background: var(--nuage);
+  color: var(--coquelicot);
+  box-shadow: var(--shadow-field);
+}
+.inv-actions .inv-add {
+  flex-grow: 1.5;
+  background: var(--prairie);
+  color: var(--on-accent);
+  box-shadow: var(--shadow-glow);
 }
 
 /* ---------- État vide ---------- */

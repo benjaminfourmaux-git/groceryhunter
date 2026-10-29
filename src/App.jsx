@@ -483,13 +483,13 @@ export default function App() {
             aria-hidden={!(view === 'inventory' && selected.size > 0)}>
             <div className="add-slot-inner">
               <div className="inv-actions">
-                <button type="button" className="btn-primary" onClick={handleAddSelectedToList}>
-                  <Icon name="plus" size={18} />
-                  {t('inv_to_list')}
-                </button>
-                <button type="button" className="btn-danger" onClick={askDeleteSelected}>
+                <button type="button" className="inv-delete" onClick={askDeleteSelected}>
                   <Icon name="trash" size={18} />
-                  {t('inv_delete')}
+                  <span>{t('inv_delete')}</span>
+                </button>
+                <button type="button" className="inv-add" onClick={handleAddSelectedToList}>
+                  <Icon name="plus" size={18} />
+                  <span>{t('inv_to_list')}</span>
                 </button>
               </div>
             </div>

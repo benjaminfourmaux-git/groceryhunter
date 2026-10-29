@@ -282,13 +282,13 @@ export default function Sandbox() {
       assert('Sélection : ligne marquée et remontée en tête', invRows()[0].querySelector('.item-name').textContent === 'Beurre' && invRows()[0].classList.contains('selected'))
       assert('Sélection : les deux boutons apparaissent', document.querySelector(".add-slot[data-active='true'] .inv-actions"))
       const before = state.current.items.length
-      flushSync(() => document.querySelector('.inv-actions .btn-primary').click())
+      flushSync(() => document.querySelector('.inv-actions .inv-add').click())
       await sleep(60)
       assert('Ajouter à la liste : copie sans vider l’inventaire', state.current.items.length === before + 1 && invRows().some((li) => li.querySelector('.item-name').textContent === 'Beurre'))
       assert('Ajouter à la liste : la sélection se décoche', !document.querySelector('.inv-item.selected') && !document.querySelector(".add-slot[data-active='true'] .inv-actions"))
       flushSync(() => touchClick(dot(invRows().find((li) => li.querySelector('.item-name').textContent === 'Beurre'))))
       await sleep(60)
-      flushSync(() => document.querySelector('.inv-actions .btn-danger').click())
+      flushSync(() => document.querySelector('.inv-actions .inv-delete').click())
       await sleep(430)
       assert('Supprimer : le produit quitte l’inventaire', !invRows().some((li) => li.querySelector('.item-name').textContent === 'Beurre'))
       flushSync(() => setView('list'))
@@ -412,7 +412,7 @@ export default function Sandbox() {
       </div>
       <div className="dock"><div className="dock-ground" ref={dockRef}>
         <div className="add-slot" data-active={view === 'list'} inert={view !== 'list' ? '' : undefined}><div className="add-slot-inner"><AddBar onAdd={(name, quantity) => setItems((data) => [{ ...seed[0], id: `added-${Date.now()}`, name, quantity, created_at: new Date().toISOString() }, ...data])} /></div></div>
-        <div className="add-slot" data-active={view === 'inventory' && selected.size > 0} inert={view === 'inventory' && selected.size > 0 ? undefined : ''}><div className="add-slot-inner"><div className="inv-actions"><button type="button" className="btn-primary" onClick={addSelectedToList}>{t('inv_to_list')}</button><button type="button" className="btn-danger" onClick={deleteSelected}>{t('inv_delete')}</button></div></div></div>
+        <div className="add-slot" data-active={view === 'inventory' && selected.size > 0} inert={view === 'inventory' && selected.size > 0 ? undefined : ''}><div className="add-slot-inner"><div className="inv-actions"><button type="button" className="inv-delete" onClick={deleteSelected}><span>{t('inv_delete')}</span></button><button type="button" className="inv-add" onClick={addSelectedToList}><span>{t('inv_to_list')}</span></button></div></div></div>
         <nav className="tabbar" role="tablist" data-active={view} ref={barRef}><span className="tab-indicator" ref={indicatorRef} />{['list', 'inventory'].map((mode) => <button key={mode} type="button" role="tab" className={`tab ${view === mode ? 'active' : ''}`} aria-selected={view === mode} onClick={() => setView(mode)}>{t(`tab_${mode}`)}</button>)}</nav>
       </div></div>
       {sheet && <BottomSheet onClose={closeSheet}><h2>Classement</h2><button onClick={closeSheet}>Fermer</button></BottomSheet>}
