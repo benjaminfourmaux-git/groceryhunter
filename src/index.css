@@ -17,6 +17,7 @@
   --encre-2: #5c6b62; /* texte secondaire, 5,3:1 sur fond */
   --prairie: #3e7a46; /* marque : bouton +, onglet actif, quantités */
   --coquelicot: #b33a28; /* « acheté », supprimer */
+  --coquelicot-texte: var(--coquelicot); /* texte rouge sur nuage, 5,7:1 */
   --soleil: #e8b23c; /* pastille de compteur, 1er du classement */
   --on-accent: #fdfbf5; /* texte sur prairie / coquelicot */
   --on-soleil: #2a3a34;
@@ -120,6 +121,7 @@
     --encre-2: #a9b4c4;
     --prairie: #7fb07a;
     --coquelicot: #e8806b;
+    --coquelicot-texte: #ec8a75; /* #e8806b fait 4,48:1 sur nuage, juste sous AA */
     --soleil: #f0c06a; /* la lune */
     --on-accent: #16233a;
     --on-soleil: #16233a;
@@ -165,6 +167,7 @@
   --encre-2: #a9b4c4;
   --prairie: #7fb07a;
   --coquelicot: #e8806b;
+  --coquelicot-texte: #ec8a75; /* #e8806b fait 4,48:1 sur nuage, juste sous AA */
   --soleil: #f0c06a; /* la lune */
   --on-accent: #16233a;
   --on-soleil: #16233a;
@@ -1079,7 +1082,7 @@ button.qty-badge {
 }
 .inv-actions .inv-delete {
   background: var(--nuage);
-  color: var(--coquelicot);
+  color: var(--coquelicot-texte);
   box-shadow: var(--shadow-field);
 }
 .inv-actions .inv-add {
