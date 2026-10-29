@@ -49,7 +49,7 @@ function apply(notify) {
     return
   }
   // Safari plus ancien : fondu des surfaces, sans imposer une API récente.
-  const nodes = [...document.querySelectorAll('html, body, .app, .appbar, .sky-fill, .dock-ground, .modal, .morph, .item, .hist-item, input, .seg, .seg-btn, .onboarding-screen, .onboarding-access, .onboarding-sky, .onboarding-primary, .onboarding-tabs, .buy-dot, .qty-badge, .tabbar, .tab-indicator')]
+  const nodes = [...document.querySelectorAll('html, body, .app, .appbar, .sky-fill, .dock-ground, .modal, .morph, .item, .inv-item, .select-dot-circle, input, .seg, .seg-btn, .onboarding-screen, .onboarding-access, .onboarding-sky, .onboarding-primary, .onboarding-tabs, .buy-dot, .qty-badge, .tabbar, .tab-indicator')]
   const colors = nodes.map((node) => {
     const style = getComputedStyle(node)
     return { backgroundColor: style.backgroundColor, color: style.color, fill: style.fill }

@@ -5,10 +5,11 @@
   "type": "module",
   "description": "Liste de courses commune et synchronisée pour un foyer (PWA + Supabase).",
   "scripts": {
-    "test": "node --test src/lib/*.test.js",
     "dev": "vite --host",
     "build": "vite build",
-    "preview": "vite preview --host"
+    "preview": "vite preview --host",
+    "test": "vitest run",
+    "test:sql": "supabase/tests/run.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
@@ -16,8 +17,12 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@vitejs/plugin-react": "^4.3.1",
+    "jsdom": "^29.1.1",
     "vite": "^5.4.8",
-    "vite-plugin-pwa": "^0.20.5"
+    "vite-plugin-pwa": "^0.20.5",
+    "vitest": "^2.1.9"
   }
 }

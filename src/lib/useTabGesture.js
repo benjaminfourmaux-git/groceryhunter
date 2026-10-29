@@ -15,7 +15,7 @@ export default function useTabGesture(barRef, indicatorRef, viewRef, onChange, p
     function down(e) {
       if (!e.isPrimary || e.button !== 0 || drag) return
       blockClick = false
-      drag = { pid: e.pointerId, x: e.clientX, y: e.clientY, tab: e.target.closest('.tab'), fraction: viewRef.current === 'history' ? 1 : 0, moved: false }
+      drag = { pid: e.pointerId, x: e.clientX, y: e.clientY, tab: e.target.closest('.tab'), fraction: viewRef.current === 'inventory' ? 1 : 0, moved: false }
       indicator.style.transition = 'none'
       try { bar.setPointerCapture(e.pointerId) } catch { /* noop */ }
     }
@@ -25,7 +25,7 @@ export default function useTabGesture(barRef, indicatorRef, viewRef, onChange, p
       const dy = e.clientY - drag.y
       if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { cancel(e); return }
       if (Math.abs(dx) > 4) drag.moved = true
-      const start = viewRef.current === 'history' ? 1 : 0
+      const start = viewRef.current === 'inventory' ? 1 : 0
       drag.fraction = Math.max(0, Math.min(1, start + dx / ((bar.clientWidth - 12) / 2)))
       indicator.style.transform = `translateX(${drag.fraction * 100}%)`
     }
@@ -37,8 +37,8 @@ export default function useTabGesture(barRef, indicatorRef, viewRef, onChange, p
       const current = drag
       reset()
       suppressClick()
-      if (current.moved) onChange(current.fraction >= 0.5 ? 'history' : 'list')
-      else if (current.tab) onChange(current.tab === bar.querySelectorAll('.tab')[1] ? 'history' : 'list')
+      if (current.moved) onChange(current.fraction >= 0.5 ? 'inventory' : 'list')
+      else if (current.tab) onChange(current.tab === bar.querySelectorAll('.tab')[1] ? 'inventory' : 'list')
     }
     function cancel(e) {
       if (!drag || e.pointerId !== drag.pid) return
@@ -54,7 +54,7 @@ export default function useTabGesture(barRef, indicatorRef, viewRef, onChange, p
       if (!e.target.closest('.tab') || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return
       e.preventDefault()
       const target = e.key === 'Home' ? 0 : e.key === 'End' ? 1 : viewRef.current === 'list' ? 1 : 0
-      onChange(target ? 'history' : 'list')
+      onChange(target ? 'inventory' : 'list')
       bar.querySelectorAll('.tab')[target]?.focus({ preventScroll: true })
     }
     bar.addEventListener('pointerdown', down)

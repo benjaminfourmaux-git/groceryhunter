@@ -17,6 +17,7 @@
   --encre-2: #5c6b62; /* texte secondaire, 5,3:1 sur fond */
   --prairie: #3e7a46; /* marque : bouton +, onglet actif, quantités */
   --coquelicot: #b33a28; /* « acheté », supprimer */
+  --coquelicot-texte: var(--coquelicot); /* texte rouge sur nuage, 5,7:1 */
   --soleil: #e8b23c; /* pastille de compteur, 1er du classement */
   --on-accent: #fdfbf5; /* texte sur prairie / coquelicot */
   --on-soleil: #2a3a34;
@@ -120,6 +121,7 @@
     --encre-2: #a9b4c4;
     --prairie: #7fb07a;
     --coquelicot: #e8806b;
+    --coquelicot-texte: #ec8a75; /* #e8806b fait 4,48:1 sur nuage, juste sous AA */
     --soleil: #f0c06a; /* la lune */
     --on-accent: #16233a;
     --on-soleil: #16233a;
@@ -165,6 +167,7 @@
   --encre-2: #a9b4c4;
   --prairie: #7fb07a;
   --coquelicot: #e8806b;
+  --coquelicot-texte: #ec8a75; /* #e8806b fait 4,48:1 sur nuage, juste sous AA */
   --soleil: #f0c06a; /* la lune */
   --on-accent: #16233a;
   --on-soleil: #16233a;
@@ -799,6 +802,61 @@ h2 {
   white-space: nowrap;
 }
 
+/* Le nom ouvre l'édition de la quantité : c'est un vrai bouton, mais il ne
+   doit rien changer à l'allure de la ligne. */
+.item-name-btn {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.item-name-btn:disabled {
+  cursor: default;
+}
+button.qty-badge {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+/* Pas de « saisie » du nom ni de la pastille : ni sélection, ni glisser-déposer
+   natif, ni menu d'appui long iOS. Ce sont des contrôles, pas du texte à
+   copier — mêmes protections que la case « acheté ». */
+.item-name-btn,
+.item-name-btn *,
+button.qty-badge {
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Le champ de quantité, ouvert à la place de la pastille. Jamais sous 16 px :
+   en dessous, iOS zoome à la mise au point. */
+.qty-edit {
+  flex: none;
+}
+.qty-edit input {
+  width: 92px;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--prairie);
+  text-align: center;
+  background: var(--fond);
+  border: 1.5px solid var(--prairie);
+  border-radius: var(--pill);
+  padding: 4px 8px;
+  outline: none;
+}
+
 /* ---------- Swipe-to-delete ---------- */
 /* Le li (.swipe-row) porte le rayon, l'ombre portée et le clip. L'article
    (.swipe-fg) est OPAQUE et glisse par-dessus un fond coquelicot plein
@@ -871,36 +929,167 @@ h2 {
 }
 
 /* ---------- Historique (corbeille récente) ---------- */
-.hist-list {
+/* ---------- Inventaire ---------- */
+/* Les lignes de la liste, en plus fin pour en afficher davantage : moins de
+   marge interne, un rayon plus court, un nom plus petit. La cible du rond reste
+   à 44 px grâce aux marges négatives — la ligne maigrit, pas la zone tactile. */
+.inv-view {
+  padding: 0 0 8px;
+}
+.inv-list {
   overflow-anchor: none;
   list-style: none;
   margin: 0;
-  padding: 16px;
+  padding: 4px 16px 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
-.hist-item {
+.inv-item {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   background: var(--nuage);
-  border-radius: var(--radius-card);
-  padding: 14px 16px;
+  border-radius: 14px;
+  padding: 8px 10px 8px 14px;
   box-shadow: var(--shadow-card);
+  transition: background 0.2s var(--ease), box-shadow 0.2s var(--ease);
   animation: item-in 0.42s var(--spring) both;
 }
-.hist-item .avatar {
+.inv-item .avatar {
   flex: none;
 }
-.hist-item .item-name {
+.inv-item .item-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.hist-when {
+/* Sélectionnée : la ligne se pose sur le crème des lignes cochées, cernée de
+   prairie. Elle est aussi remontée en tête de liste par le tri. */
+.inv-item.selected {
+  background: var(--nuage-2);
+  box-shadow: inset 0 0 0 1.5px var(--prairie), var(--shadow-card);
+}
+
+/* Le rond de sélection (components/CheckDot.jsx). Même géométrie que la case
+   « acheté », en prairie et sans anneau. */
+.select-dot {
   flex: none;
+  position: relative;
+  width: 40px;
+  height: 40px;
+  margin: -6px -4px -6px 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.select-dot,
+.select-dot * {
+  -webkit-user-drag: none;
+}
+.select-dot svg {
+  pointer-events: none;
+}
+.select-dot-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--encre-2);
+  background: transparent;
+  color: var(--on-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.16s var(--ease), border-color 0.16s var(--ease),
+    transform 0.12s var(--ease);
+}
+.select-dot.pressed .select-dot-circle {
+  transform: scale(0.92);
+}
+.select-dot.on .select-dot-circle {
+  background: var(--prairie);
+  border-color: var(--prairie);
+}
+
+/* Le choix du tri, aligné à droite au-dessus des lignes. */
+.inv-sort {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 12px 16px 0;
+}
+.inv-sort button {
+  border: none;
+  background: transparent;
+  color: var(--encre-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: var(--pill);
+  cursor: pointer;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+.inv-sort button.on {
+  color: var(--on-accent);
+  background: var(--prairie);
+}
+
+/* Les deux actions de la sélection. Elles prennent la place de la barre
+   d'ajout dans le dock, donc juste au-dessus des onglets, et n'apparaissent
+   qu'avec au moins un produit coché. Pilules de la hauteur de la barre
+   d'ajout : « Supprimer » en retrait à gauche, « Ajouter à la liste » en vert
+   à droite, là où se trouve le + dans l'onglet Liste. */
+.inv-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+.inv-actions button {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 52px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--pill);
+  font-size: var(--fs-md);
+  font-weight: 700;
   white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.18s var(--spring), box-shadow 0.2s var(--ease);
+}
+.inv-actions button svg {
+  flex: none;
+}
+.inv-actions button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.inv-actions .inv-delete {
+  background: var(--nuage);
+  color: var(--coquelicot-texte);
+  box-shadow: var(--shadow-field);
+}
+.inv-actions .inv-add {
+  flex-grow: 1.5;
+  background: var(--prairie);
+  color: var(--on-accent);
+  box-shadow: var(--shadow-glow);
 }
 
 /* ---------- État vide ---------- */
@@ -991,7 +1180,7 @@ h2 {
   background: var(--prairie);
   transition: transform 0.42s var(--spring);
 }
-.tabbar[data-active='history'] .tab-indicator {
+.tabbar[data-active='inventory'] .tab-indicator {
   transform: translateX(100%);
 }
 .tab {

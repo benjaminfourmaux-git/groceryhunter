@@ -4,13 +4,13 @@ import * as api from './lib/api'
 import { enablePush, pushSupported, pushPermission, pushUnsupportedReason } from './lib/push'
 import { initPress } from './lib/press'
 import { uuid } from './lib/uuid'
-import { T1_MS, T2_MS } from './lib/config'
+import { T1_MS } from './lib/config'
 import { useLang } from './lib/i18n'
 import Onboarding from './components/Onboarding'
 import Header from './components/Header'
 import AddBar from './components/AddBar'
 import ShoppingList from './components/ShoppingList'
-import History from './components/History'
+import Inventory from './components/Inventory'
 import GroupPanel from './components/GroupPanel'
 import BottomSheet from './components/BottomSheet'
 import Icon from './components/Icon'
@@ -29,10 +29,26 @@ export default function App() {
   const [member, setMember] = useState(null)
   const [members, setMembers] = useState([])
   const [items, setItems] = useState([])
+  const [products, setProducts] = useState([]) // l'inventaire : un produit distinct par ligne
+  // Sélection dans l'inventaire : locale et non synchronisée, pour que deux
+  // membres puissent cocher en même temps sans se gêner.
+  const [selected, setSelected] = useState(() => new Set())
+  // Tri de l'inventaire, retenu d'une session à l'autre : un réglage qui se
+  // remet à zéro à chaque lancement agace plus qu'il ne sert.
+  const [invSort, setInvSort] = useState(() => {
+    try {
+      const saved = localStorage.getItem('invSort')
+      if (saved === 'rank' || saved === 'alpha') return saved
+    } catch {
+      /* noop */
+    }
+    return 'rank'
+  })
   const now = useLifecycleClock(items)
-  const [view, setView] = useState('list') // list | history
+  const [view, setView] = useState('list') // list | inventory
   const [pushState, setPushState] = useState('default')
   const [leaving, setLeaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false) // suppression multiple dans l'inventaire
   const [statsOpen, setStatsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // Le morph Réglages est « présent » de l'ouverture jusqu'à la FIN de la
@@ -48,7 +64,7 @@ export default function App() {
   // Après une mutation locale sur les articles, on a déjà rechargé la liste :
   // on ignore l'écho temps réel (qui arrive plus tard) pour éviter un 2e rendu.
   const skipItemsEchoUntil = useRef(0)
-  const cleaning = useRef(false)
+  const promoting = useRef(false)
   const settingsBtnRef = useRef(null) // ancre du « morph » Réglages (le bouton ⋯)
   const statsBtnRef = useRef(null)
   const mainBarRef = useRef(null)
@@ -71,11 +87,6 @@ export default function App() {
   const listItems = useMemo(() => orderedItems.filter((it) =>
     !it.bought_at || now - boughtMsOf(it) < T1_MS
   ), [orderedItems, now])
-  const historyItems = useMemo(() => orderedItems.filter((it) => {
-    const bought = boughtMsOf(it)
-    return bought != null && now - bought >= T1_MS && now - bought < T1_MS + T2_MS
-  }).reverse(), [orderedItems, now])
-
   const toBuyCount = useMemo(() => items.reduce((n, it) => n + (it.bought_at ? 0 : 1), 0), [items])
 
   const showToast = useCallback((msg, kind = 'info') => {
@@ -88,6 +99,42 @@ export default function App() {
   const loadMembers = useCallback(async (h) => {
     setMembers(await api.getMembers(h))
   }, [])
+  const loadProducts = useCallback(async (h) => {
+    setProducts(await api.getProducts(h))
+  }, [])
+
+  const toggleSelected = useCallback((id) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('invSort', invSort)
+    } catch {
+      /* noop */
+    }
+  }, [invSort])
+
+  // La sélection ne survit pas au changement d'onglet.
+  useEffect(() => {
+    if (view !== 'inventory') setSelected((prev) => (prev.size ? new Set() : prev))
+  }, [view])
+
+  // Un produit supprimé par quelqu'un d'autre ne doit pas rester sélectionné :
+  // sinon les deux boutons resteraient affichés pour une ligne disparue.
+  useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev
+      const alive = new Set(products.map((p) => p.id))
+      const next = new Set()
+      prev.forEach((id) => alive.has(id) && next.add(id))
+      return next.size === prev.size ? prev : next
+    })
+  }, [products])
 
   // Effet « press organique » sur tous les boutons (une seule fois).
   useEffect(() => initPress(), [])
@@ -100,33 +147,26 @@ export default function App() {
     if (member?.id) api.setMemberLang(lang)
   }, [lang, member])
 
-  // Nettoyage paresseux : supprime en base les articles achetés depuis > T1+T2
-  // (déjà invisibles, filtrés des deux vues). Pur entretien, sans infra serveur.
+  // Promotion paresseuse : une heure après l'achat, l'article quitte la liste
+  // pour l'inventaire. Rien n'est écrit avant — c'est ce qui permet de décocher
+  // sans laisser de trace. Réveillée par l'horloge, qui tique à l'échéance T1.
   useEffect(() => {
-    if (!hid || cleaning.current) return
-    const cutoffMs = Date.now() - (T1_MS + T2_MS)
-    const hasExpired = items.some((it) => {
+    if (!hid || promoting.current) return
+    const hasRipe = items.some((it) => {
       const b = boughtMsOf(it)
-      return b != null && b < cutoffMs
+      return b != null && now - b >= T1_MS
     })
-    if (!hasExpired) return
-    cleaning.current = true
+    if (!hasRipe) return
+    promoting.current = true
     skipItemsEchoUntil.current = Date.now() + 2000
     api
-      .cleanupExpired(hid, new Date(cutoffMs).toISOString())
-      .then(() =>
-        setItems((prev) =>
-          prev.filter((it) => {
-            const b = boughtMsOf(it)
-            return !(b != null && b < Date.now() - (T1_MS + T2_MS))
-          })
-        )
-      )
+      .promoteBoughtItems()
+      .then(() => Promise.all([loadItems(hid), loadProducts(hid)]))
       .catch(() => {})
       .finally(() => {
-        cleaning.current = false
+        promoting.current = false
       })
-  }, [now, items, hid])
+  }, [now, items, hid, loadItems, loadProducts])
 
   // ---- Démarrage : session anonyme + membre ---------------------------------
   useEffect(() => {
@@ -165,6 +205,7 @@ export default function App() {
 
     loadItems(h)
     loadMembers(h)
+    loadProducts(h)
 
     if (!pushSupported()) {
       setPushState('unsupported')
@@ -190,6 +231,11 @@ export default function App() {
         { event: '*', schema: 'public', table: 'members', filter: `household_id=eq.${h}` },
         () => loadMembers(h) // compteur d'achats mis à jour → classement en direct
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products', filter: `household_id=eq.${h}` },
+        () => loadProducts(h) // promotion ou suppression chez quelqu'un d'autre
+      )
       .subscribe()
 
     channelRef.current = channel
@@ -197,7 +243,7 @@ export default function App() {
       supabase.removeChannel(channel)
       channelRef.current = null
     }
-  }, [member, loadItems, loadMembers])
+  }, [member, loadItems, loadMembers, loadProducts])
 
   // ---- Actions d'onboarding -------------------------------------------------
   async function handleCreate(householdName, displayName, color) {
@@ -213,7 +259,65 @@ export default function App() {
     setPhase('ready')
   }
 
+  // ---- Les deux actions de la sélection dans l'inventaire -------------------
+
+  // Copie : les produits restent dans l'inventaire, et ceux qui sont déjà à
+  // acheter ne sont pas ajoutés deux fois (la RPC renvoie le compte réel). On
+  // ne change pas d'onglet : le bandeau et la pastille de la liste suffisent à
+  // dire que c'est parti, et on peut enchaîner plusieurs lots.
+  async function handleAddSelectedToList() {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    setSelected(new Set())
+    try {
+      skipItemsEchoUntil.current = Date.now() + 1500
+      const n = await api.addProductsToList(ids)
+      await loadItems(hid)
+      showToast(n > 0 ? t('inv_added', { n }) : t('inv_added_none'), n > 0 ? 'success' : 'info')
+    } catch (err) {
+      showToast(err.message || t('err_inv_add'), 'error')
+    }
+  }
+
+  // Un seul produit part sans confirmation (la ligne disparaît sous le doigt,
+  // c'est lisible) ; au-delà, on demande — effacer vingt produits par mégarde
+  // ne se rattrape pas.
+  function askDeleteSelected() {
+    if (selected.size > 1) setConfirmDelete(true)
+    else handleDeleteSelected()
+  }
+
+  async function handleDeleteSelected() {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    setConfirmDelete(false)
+    setSelected(new Set())
+    try {
+      await api.deleteProducts(ids)
+      await loadProducts(hid)
+    } catch (err) {
+      showToast(err.message || t('err_inv_delete'), 'error')
+    }
+  }
+
   // ---- Actions liste --------------------------------------------------------
+
+  // Quantité modifiable après coup : les articles repris de l'inventaire
+  // arrivent sans quantité, et c'est dans la liste qu'on la règle.
+  async function handleSetQuantity(id, raw) {
+    const q = raw && raw.trim() ? raw.trim() : null
+    const before = items.find((it) => it.id === id)?.quantity ?? null
+    if (q === before) return // rien à écrire : le champ a été ouvert puis refermé
+    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, quantity: q } : it)))
+    try {
+      skipItemsEchoUntil.current = Date.now() + 1500
+      await api.setItemQuantity(id, q)
+    } catch (err) {
+      setItems((prev) => prev.map((it) => (it.id === id ? { ...it, quantity: before } : it)))
+      showToast(err.message || t('err_action'), 'error')
+    }
+  }
+
   async function handleAdd(name, qty) {
     // Optimistic UI : on génère l'uuid côté client et on l'affiche avant la
     // confirmation serveur (même clé partout → pas de remontage ni double anim).
@@ -353,12 +457,15 @@ export default function App() {
           className="content has-cta" data-active={view === 'list'} aria-hidden={view !== 'list'}
           inert={view !== 'list' ? '' : undefined}>
           <ShoppingList items={listItems} now={now} memberById={memberById}
-            onToggleBought={handleToggleBought} onDelete={handleDelete} active={view === 'list'} />
+            onToggleBought={handleToggleBought} onDelete={handleDelete}
+            onSetQuantity={handleSetQuantity} active={view === 'list'} />
         </main>
-        <main id="history-panel" role="tabpanel" aria-labelledby="history-tab"
-          className="content" data-active={view === 'history'} aria-hidden={view !== 'history'}
-          inert={view !== 'history' ? '' : undefined}>
-          <History items={historyItems} memberById={memberById} active={view === 'history'} />
+        <main id="inventory-panel" role="tabpanel" aria-labelledby="inventory-tab"
+          className="content" data-active={view === 'inventory'} aria-hidden={view !== 'inventory'}
+          inert={view !== 'inventory' ? '' : undefined}>
+          <Inventory products={products} memberById={memberById} selected={selected}
+            onToggleSelected={toggleSelected} sort={invSort} onSortChange={setInvSort}
+            active={view === 'inventory'} />
         </main>
       </div>
 
@@ -369,7 +476,26 @@ export default function App() {
             <div className="add-slot-inner"><AddBar onAdd={handleAdd} /></div>
           </div>
 
-          <nav className="tabbar" role="tablist" aria-label={t('tab_list') + ' / ' + t('tab_history')} data-active={view} ref={tabbarRef}>
+          {/* Mêmes mécaniques que la barre d'ajout : le créneau se replie quand
+              rien n'est coché, donc les onglets ne sautent pas. */}
+          <div className="add-slot" data-active={view === 'inventory' && selected.size > 0}
+            inert={view === 'inventory' && selected.size > 0 ? undefined : ''}
+            aria-hidden={!(view === 'inventory' && selected.size > 0)}>
+            <div className="add-slot-inner">
+              <div className="inv-actions">
+                <button type="button" className="inv-delete" onClick={askDeleteSelected}>
+                  <Icon name="trash" size={18} />
+                  <span>{t('inv_delete')}</span>
+                </button>
+                <button type="button" className="inv-add" onClick={handleAddSelectedToList}>
+                  <Icon name="plus" size={18} />
+                  <span>{t('inv_to_list')}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <nav className="tabbar" role="tablist" aria-label={t('tab_list') + ' / ' + t('tab_inventory')} data-active={view} ref={tabbarRef}>
             <span className="tab-indicator" aria-hidden="true" ref={indicatorRef} />
             <button
               type="button"
@@ -383,16 +509,35 @@ export default function App() {
             </button>
             <button
               type="button"
-              id="history-tab" role="tab" aria-selected={view === 'history'} aria-controls="history-panel"
-              className={'tab' + (view === 'history' ? ' active' : '')}
-              onClick={() => setView('history')}
+              id="inventory-tab" role="tab" aria-selected={view === 'inventory'} aria-controls="inventory-panel"
+              className={'tab' + (view === 'inventory' ? ' active' : '')}
+              onClick={() => setView('inventory')}
             >
-              <Icon name="clock" size={19} />
-              <span>{t('tab_history')}</span>
+              <Icon name="inventory" size={19} />
+              <span>{t('tab_inventory')}</span>
             </button>
           </nav>
         </div>
       </div>
+
+      {confirmDelete && (
+        <BottomSheet className="confirm" onClose={() => setConfirmDelete(false)}>
+          {(close) => (
+            <>
+              <h2>{t('inv_delete_title', { n: selected.size })}</h2>
+              <p className="muted">{t('inv_delete_body')}</p>
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost" onClick={close}>
+                  {t('cancel')}
+                </button>
+                <button type="button" className="btn-danger" onClick={handleDeleteSelected}>
+                  {t('inv_delete')}
+                </button>
+              </div>
+            </>
+          )}
+        </BottomSheet>
+      )}
 
       {leaving && (
         <BottomSheet className="confirm" onClose={() => setLeaving(false)}>

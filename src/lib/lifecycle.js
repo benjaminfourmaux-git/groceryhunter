@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
-import { T1_MS, T2_MS } from './config.js'
+import { T1_MS } from './config.js'
 
 export function nextItemDeadline(items, now) {
   let next = Infinity
   for (const it of items) {
     if (!it.bought_at) continue
-    const bought = Date.parse(it.bought_at)
-    for (const deadline of [bought + T1_MS, bought + T1_MS + T2_MS]) {
-      if (deadline > now && deadline < next) next = deadline
-    }
+    // Seule échéance visible : à T1, l'article quitte la liste pour
+    // l'inventaire (la promotion elle-même est tranchée côté serveur).
+    const deadline = Date.parse(it.bought_at) + T1_MS
+    if (deadline > now && deadline < next) next = deadline
   }
   return next
 }
 
-// Les changements de vue ont lieu aux échéances, pas par un rendu global à 1 Hz.
+// Les changements de vue ont lieu à l'échéance, pas par un rendu global à 1 Hz.
 export function useLifecycleClock(items) {
   const [now, setNow] = useState(Date.now)
   useEffect(() => {

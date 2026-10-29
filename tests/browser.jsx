@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import ShoppingList from '../src/components/ShoppingList'
-import History from '../src/components/History'
+import Inventory from '../src/components/Inventory'
 import Header from '../src/components/Header'
 import AddBar from '../src/components/AddBar'
 import BottomSheet from '../src/components/BottomSheet'
@@ -12,7 +12,7 @@ import GroupPanel from '../src/components/GroupPanel'
 import Onboarding from '../src/components/Onboarding'
 import Toast from '../src/components/Toast'
 import { useLang } from '../src/lib/i18n'
-import { T1_MS, T2_MS } from '../src/lib/config'
+import { T1_MS } from '../src/lib/config'
 import { initPress } from '../src/lib/press'
 import { setThemePref, useEffectiveTheme, useThemePref } from '../src/lib/theme'
 import { keyboardHeight, reduceMedia } from './browser-env'
@@ -39,6 +39,11 @@ const touchClick = (node, x = 340, y = 160) => {
 export default function Sandbox() {
   const { t, lang, toggleLang } = useLang()
   const [items, setItems] = useState(seed)
+  // L'inventaire et sa sélection. En vrai, la promotion est tranchée par la
+  // RPC ; ici l'effet ci-dessous la rejoue en mémoire, à la même échéance.
+  const [products, setProducts] = useState([{ id: 'inv-0', name: 'Beurre', score: 4.2, last_bought_at: new Date(stamp - 3 * 86400000).toISOString(), last_bought_by: 'alice' }])
+  const [selected, setSelected] = useState(() => new Set())
+  const [invSort, setInvSort] = useState('rank')
   const [view, setView] = useState('list')
   const [sheet, setSheet] = useState(false)
   const [settings, setSettings] = useState(false)
@@ -62,7 +67,31 @@ export default function Sandbox() {
   state.current = { items, view, lang, toggleLang, pref, theme }
   const sorted = useMemo(() => [...items].sort((a, b) => !!a.bought_at !== !!b.bought_at ? (a.bought_at ? 1 : -1) : a.bought_at ? Date.parse(a.bought_at) - Date.parse(b.bought_at) : Date.parse(b.created_at) - Date.parse(a.created_at)), [items])
   const list = useMemo(() => sorted.filter((it) => !it.bought_at || now - Date.parse(it.bought_at) < T1_MS), [sorted, now])
-  const history = useMemo(() => sorted.filter((it) => it.bought_at && now - Date.parse(it.bought_at) >= T1_MS && now - Date.parse(it.bought_at) < T1_MS + T2_MS).reverse(), [sorted, now])
+  // Promotion : à T1, l'article quitte la liste et rejoint l'inventaire, un
+  // produit par nom (le score s'incrémente si le produit y est déjà).
+  useEffect(() => {
+    const ripe = items.filter((it) => it.bought_at && now - Date.parse(it.bought_at) >= T1_MS)
+    if (ripe.length === 0) return
+    setProducts((previous) => {
+      const next = [...previous]
+      for (const it of ripe) {
+        const key = it.name.trim().toLowerCase()
+        const found = next.findIndex((p) => p.name.trim().toLowerCase() === key)
+        if (found === -1) next.push({ id: `inv-${it.id}`, name: it.name, score: 1, last_bought_at: it.bought_at, last_bought_by: it.bought_by })
+        else next[found] = { ...next[found], score: next[found].score + 1, last_bought_at: it.bought_at, last_bought_by: it.bought_by }
+      }
+      return next
+    })
+    setItems((data) => data.filter((it) => !ripe.some((r) => r.id === it.id)))
+  }, [items, now])
+  const toggleSelected = (id) => setSelected((previous) => { const next = new Set(previous); if (!next.delete(id)) next.add(id); return next })
+  const addSelectedToList = () => {
+    const toBuy = new Set(items.filter((it) => !it.bought_at).map((it) => it.name.trim().toLowerCase()))
+    const picked = products.filter((p) => selected.has(p.id) && !toBuy.has(p.name.trim().toLowerCase()))
+    setSelected(new Set())
+    setItems((data) => [...picked.map((p, i) => ({ ...seed[0], id: `from-inv-${p.id}-${i}`, name: p.name, quantity: '', bought_at: null, bought_by: null, created_at: new Date().toISOString() })), ...data])
+  }
+  const deleteSelected = () => { setProducts((data) => data.filter((p) => !selected.has(p.id))); setSelected(new Set()) }
   const toggle = (id, bought) => {
     toggles.current++
     setItems((data) => data.map((it) => it.id === id ? { ...it, bought_at: bought ? new Date().toISOString() : null, bought_by: bought ? 'alice' : null } : it))
@@ -212,10 +241,10 @@ export default function Sandbox() {
       const retained = row(5)
       listPanel().scrollTop = 300
       const scroll = listPanel().scrollTop
-      flushSync(() => setView('history')); await sleep(250); flushSync(() => setView('list')); await sleep(250)
+      flushSync(() => setView('inventory')); await sleep(250); flushSync(() => setView('list')); await sleep(250)
       assert('Onglets : DOM et scroll conservés', row(5) === retained && listPanel().scrollTop === scroll)
       pointer(tabbar, 'pointerdown', 80, 800); pointer(tabbar, 'pointermove', 330, 800); flushSync(() => pointer(tabbar, 'pointerup', 330, 800))
-      assert('Glissé d’onglet validé', state.current.view === 'history')
+      assert('Glissé d’onglet validé', state.current.view === 'inventory')
       flushSync(() => setView('list')); listPanel().scrollTop = 0
       const restored = row(2)
       flushSync(() => setItems(seed.filter((it) => it.id !== 'qa-2')))
@@ -238,14 +267,31 @@ export default function Sandbox() {
       assert('Suppression terminée, espace retiré', !row(3))
       flushSync(() => setItems([{ ...seed[0], bought_at: new Date(Date.now() - T1_MS + 350).toISOString(), bought_by: 'alice' }, seed[1]]))
       await sleep(430)
-      assert('T1 : sortie progressive et entrée historique', row()?.hasAttribute('data-exiting') && document.querySelectorAll('#history-panel .hist-item').length === 1)
+      assert('T1 : sortie progressive et entrée inventaire', row()?.hasAttribute('data-exiting') && document.querySelectorAll('#inventory-panel .inv-item').length === 2)
       await sleep(280)
       assert('T1 : ligne et séparateur retirés proprement', !row() && !document.querySelector('.list-sep'))
-      flushSync(() => { setView('history'); setItems([{ ...seed[0], bought_at: new Date(Date.now() - T1_MS - T2_MS + 350).toISOString() }]) })
+
+      // L'inventaire ne se vide plus tout seul : c'est la sélection qui agit.
+      flushSync(() => setView('inventory'))
+      await sleep(60)
+      const invRows = () => [...document.querySelectorAll('#inventory-panel .inv-item')]
+      const dot = (node) => node.querySelector('.select-dot')
+      const beurre = invRows().find((li) => li.querySelector('.item-name').textContent === 'Beurre')
+      flushSync(() => touchClick(dot(beurre)))
+      await sleep(60)
+      assert('Sélection : ligne marquée et remontée en tête', invRows()[0].querySelector('.item-name').textContent === 'Beurre' && invRows()[0].classList.contains('selected'))
+      assert('Sélection : les deux boutons apparaissent', document.querySelector(".add-slot[data-active='true'] .inv-actions"))
+      const before = state.current.items.length
+      flushSync(() => document.querySelector('.inv-actions .inv-add').click())
+      await sleep(60)
+      assert('Ajouter à la liste : copie sans vider l’inventaire', state.current.items.length === before + 1 && invRows().some((li) => li.querySelector('.item-name').textContent === 'Beurre'))
+      assert('Ajouter à la liste : la sélection se décoche', !document.querySelector('.inv-item.selected') && !document.querySelector(".add-slot[data-active='true'] .inv-actions"))
+      flushSync(() => touchClick(dot(invRows().find((li) => li.querySelector('.item-name').textContent === 'Beurre'))))
+      await sleep(60)
+      flushSync(() => document.querySelector('.inv-actions .inv-delete').click())
       await sleep(430)
-      assert('T2 : sortie progressive de l’historique', document.querySelector('#history-panel .hist-item')?.hasAttribute('data-exiting'))
-      await sleep(280)
-      assert('T2 : historique vide après sortie', !document.querySelector('#history-panel .hist-item'))
+      assert('Supprimer : le produit quitte l’inventaire', !invRows().some((li) => li.querySelector('.item-name').textContent === 'Beurre'))
+      flushSync(() => setView('list'))
       flushSync(() => { setItems([{ ...seed[0], bought_at: new Date().toISOString() }, seed[1]]); setView('list') })
       await sleep(450)
       const renders = renderCount.current
@@ -362,11 +408,12 @@ export default function Sandbox() {
       <Header household={{ name: 'À la maison', join_code: 'TEST' }} onShowStats={() => { setGroupMounted(true); setGroup(true) }} onOpenSettings={() => { setMenuMounted(true); setSettings(true) }} settingsBtnRef={anchorRef} hideSettingsBtn={menuMounted} statsBtnRef={groupAnchorRef} hideStatsBtn={groupMounted} />
       <div className="content-stack">
         <main id="list-panel" className="content has-cta" data-active={view === 'list'} inert={view !== 'list' ? '' : undefined}><ShoppingList items={list} now={now} memberById={members} onToggleBought={toggle} onDelete={remove} active={view === 'list'} /></main>
-        <main id="history-panel" className="content" data-active={view === 'history'} inert={view !== 'history' ? '' : undefined}><History items={history} memberById={members} active={view === 'history'} /></main>
+        <main id="inventory-panel" className="content" data-active={view === 'inventory'} inert={view !== 'inventory' ? '' : undefined}><Inventory products={products} memberById={members} selected={selected} onToggleSelected={toggleSelected} sort={invSort} onSortChange={setInvSort} active={view === 'inventory'} /></main>
       </div>
       <div className="dock"><div className="dock-ground" ref={dockRef}>
         <div className="add-slot" data-active={view === 'list'} inert={view !== 'list' ? '' : undefined}><div className="add-slot-inner"><AddBar onAdd={(name, quantity) => setItems((data) => [{ ...seed[0], id: `added-${Date.now()}`, name, quantity, created_at: new Date().toISOString() }, ...data])} /></div></div>
-        <nav className="tabbar" role="tablist" data-active={view} ref={barRef}><span className="tab-indicator" ref={indicatorRef} />{['list', 'history'].map((mode) => <button key={mode} type="button" role="tab" className={`tab ${view === mode ? 'active' : ''}`} aria-selected={view === mode} onClick={() => setView(mode)}>{t(`tab_${mode}`)}</button>)}</nav>
+        <div className="add-slot" data-active={view === 'inventory' && selected.size > 0} inert={view === 'inventory' && selected.size > 0 ? undefined : ''}><div className="add-slot-inner"><div className="inv-actions"><button type="button" className="inv-delete" onClick={deleteSelected}><span>{t('inv_delete')}</span></button><button type="button" className="inv-add" onClick={addSelectedToList}><span>{t('inv_to_list')}</span></button></div></div></div>
+        <nav className="tabbar" role="tablist" data-active={view} ref={barRef}><span className="tab-indicator" ref={indicatorRef} />{['list', 'inventory'].map((mode) => <button key={mode} type="button" role="tab" className={`tab ${view === mode ? 'active' : ''}`} aria-selected={view === mode} onClick={() => setView(mode)}>{t(`tab_${mode}`)}</button>)}</nav>
       </div></div>
       {sheet && <BottomSheet onClose={closeSheet}><h2>Classement</h2><button onClick={closeSheet}>Fermer</button></BottomSheet>}
       <GroupPanel open={group} onClose={() => setGroup(false)} onClosed={() => setGroupMounted(false)} anchorRef={groupAnchorRef} dockRef={dockRef} members={groupMembers} />

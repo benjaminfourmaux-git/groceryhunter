@@ -29,11 +29,11 @@ const PATHS = {
       <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" />
     </>
   ),
-  history: (
+  inventory: (
     <>
-      <path d="M3 3v5h5" />
-      <path d="M3.05 13a9 9 0 1 0 2.5-7.5L3 8" />
-      <path d="M12 7v5l3 2" />
+      <path d="M3 8h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8Z" />
+      <path d="M3 8l2-4.2A2 2 0 0 1 6.8 2.6h10.4a2 2 0 0 1 1.8 1.2L21 8" />
+      <path d="M10 12.5h4" />
     </>
   ),
   list: (

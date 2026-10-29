@@ -167,12 +167,31 @@ if (typeof document !== 'undefined') {
 const DIAGONAL = 1.4 // un glissé reste « horizontal » jusqu'à |dy| = 1,4 × |dx|
 const LATE_SWIPE_DX = 24 // geste parti en défilement : glissé si ≥ 24 px vers la gauche
 
-function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, exiting, t }) {
+function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, onSetQuantity, exiting, t }) {
   const rowRef = useRef(null)
   const fgRef = useRef(null)
   const drag = useRef(null)
   const removing = useRef(false)
   const wasExiting = useRef(false)
+  const qtyRef = useRef(null)
+  const [editing, setEditing] = useState(false)
+
+  // Le champ s'ouvre déjà rempli et sélectionné : on remplace une quantité plus
+  // souvent qu'on ne la complète.
+  useEffect(() => {
+    if (!editing) return
+    const el = qtyRef.current
+    if (!el) return
+    el.focus()
+    el.select()
+  }, [editing])
+
+  function commitQuantity() {
+    if (!editing) return
+    const value = qtyRef.current?.value ?? ''
+    setEditing(false)
+    onSetQuantity(it.id, value)
+  }
 
   useLayoutEffect(() => {
     const row = rowRef.current
@@ -196,6 +215,10 @@ function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, e
   function down(e) {
     if (!e.isPrimary || e.button !== 0 || drag.current) return
     if (removing.current) return
+    // Le nom et le champ de quantité sont des zones de saisie : le glissé de
+    // suppression ne part pas de là (sinon la ligne file sous le doigt qu'on
+    // posait pour corriger « x2 »).
+    if (e.target.closest('.item-name-btn, .qty-edit, .qty-badge')) return
     // Le glissé peut partir de la case : un tap la coche toujours, un glissé
     // supprime (la case annule son appui dès que le doigt bouge).
     const fromCheck = e.target.closest('.buy-check')
@@ -409,9 +432,50 @@ function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, e
       >
         <div className="item-main">
           {adder && <Avatar name={adder.display_name} color={adder.color} size={32} />}
-          <span className="item-name">{it.name}</span>
+          {/* Le nom ouvre l'édition de la quantité : les articles repris de
+              l'inventaire arrivent sans quantité, donc sans pastille à viser.
+              Un article déjà coché n'est plus modifiable — il est en partance. */}
+          <button
+            type="button"
+            className="item-name-btn"
+            onClick={() => setEditing(true)}
+            disabled={bought}
+            aria-label={t('aria_edit_qty', { name: it.name })}
+          >
+            <span className="item-name">{it.name}</span>
+          </button>
         </div>
-        {it.quantity && <span className="qty-badge">{it.quantity}</span>}
+        {editing ? (
+          <form
+            className="qty-edit"
+            onSubmit={(e) => {
+              e.preventDefault()
+              commitQuantity()
+            }}
+          >
+            <input
+              ref={qtyRef}
+              type="text"
+              defaultValue={it.quantity ?? ''}
+              placeholder={t('qty_ph')}
+              maxLength={12}
+              aria-label={t('aria_qty')}
+              onBlur={commitQuantity}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.preventDefault()
+                  setEditing(false) // annule : onBlur ne doit plus rien valider
+                }
+              }}
+            />
+          </form>
+        ) : (
+          it.quantity && (
+            <button type="button" className="qty-badge" onClick={() => setEditing(true)}>
+              {it.quantity}
+            </button>
+          )
+        )}
         {/* Le libellé change la largeur disponible pour le nom : il apparaît
             avec le rangement, pour ne pas déplacer les voisins une première fois. */}
         {displayBoughtAt && <span className="item-when">{agoLabel(now - Date.parse(displayBoughtAt), t)}</span>}
@@ -426,7 +490,7 @@ function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, e
   )
 }
 
-export default function ShoppingList({ items, now, memberById, onToggleBought, onDelete, active = true }) {
+export default function ShoppingList({ items, now, memberById, onToggleBought, onDelete, onSetQuantity, active = true }) {
   const { t } = useLang()
   const present = usePresenceItems(items, active)
   // Seule la liste visible fait vivre l'anneau chaque seconde. Le reste de
@@ -613,6 +677,7 @@ export default function ShoppingList({ items, now, memberById, onToggleBought, o
               adder={memberById[it.added_by]}
               onToggleBought={toggleBought}
               onDelete={onDelete}
+              onSetQuantity={onSetQuantity}
               t={t}
             />,
           ]
