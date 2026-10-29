@@ -28,3 +28,4 @@ pnpm-debug.log*
 # Supabase CLI
 supabase/.temp
 supabase/.branches
+dist-demo/
