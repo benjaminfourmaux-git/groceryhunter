@@ -1,0 +1,338 @@
+/* Écran de connexion — maquette « Grand ciel — connexion ».
+   Le ciel remplit l'écran ; une carte crème en haut porte tout le formulaire,
+   pour rester visible au-dessus du clavier ; les trois étapes, les nuages et
+   la prairie sont en bas (le clavier les recouvre). Couleurs par variables de
+   thème : plein jour et crépuscule. */
+.onboarding-screen {
+  --onboarding-safe-top: env(safe-area-inset-top, 0px);
+  --onboarding-safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* Toute la hauteur, fixe : le clavier passe par-dessus le bas de l'écran,
+     qui ne se recompose pas et ne défile pas. */
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--onboarding-safe-top) env(safe-area-inset-right, 0px) var(--onboarding-safe-bottom) env(safe-area-inset-left, 0px);
+  display: flex;
+  flex-direction: column;
+  container-type: size;
+  overflow: hidden;
+  overscroll-behavior: none;
+  isolation: isolate;
+  background: var(--ciel);
+  color: var(--encre);
+  -webkit-text-size-adjust: 100%;
+}
+
+.onboarding-screen *,
+.onboarding-screen *::before,
+.onboarding-screen *::after {
+  box-sizing: border-box;
+}
+
+.onboarding-day { display: var(--sky-day, inline); }
+.onboarding-night { display: var(--sky-night, none); }
+
+/* ---------- Décor ---------- */
+.onboarding-scenery {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.onboarding-birds {
+  position: absolute;
+  /* Dans la bande de la barre d'état, au-dessus de la carte (comme la maquette). */
+  top: 16px;
+  left: 0;
+  width: 100%;
+  height: 60px;
+}
+.onboarding-clouds {
+  position: absolute;
+  left: 0;
+  bottom: calc(86px + var(--onboarding-safe-bottom));
+  width: 100%;
+  height: 110px;
+}
+.onboarding-meadow {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: calc(130px + var(--onboarding-safe-bottom));
+}
+
+/* ---------- Contenu (sans défilement) ---------- */
+.onboarding-scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  padding: 10px 20px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* La carte crème. */
+.onboarding-card {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 24px 22px;
+  border-radius: 26px;
+  background: var(--nuage);
+  box-shadow: 0 14px 34px rgba(42, 58, 52, 0.18);
+}
+
+.onboarding-language {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+/* Sélecteur FR / EN compact, sur fond lin. */
+.onboarding-screen .seg.seg-compact {
+  gap: 3px;
+  padding: 3px;
+  background: var(--fond);
+  box-shadow: none;
+}
+.onboarding-screen .seg.seg-compact .seg-btn {
+  width: 32px;
+  height: 26px;
+  font-size: 11px;
+}
+
+.onboarding-icon {
+  display: block;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 8px;
+  border-radius: 13px;
+}
+
+.onboarding-card h1 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.onboarding-intro {
+  margin: 0 0 16px;
+  color: var(--encre-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Onglets : pilule prairie qui glisse sur fond lin. */
+.onboarding-tabs {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  margin: 0 0 16px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--fond);
+  isolation: isolate;
+}
+.onboarding-tabs::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 6px);
+  border-radius: inherit;
+  background: var(--prairie);
+  transition: transform 240ms var(--ease);
+  z-index: -1;
+}
+.onboarding-tabs[data-active='create']::before {
+  transform: translateX(calc(100% + 4px));
+}
+.onboarding-tabs button {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--encre-2);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 200ms var(--ease);
+}
+.onboarding-tabs button[aria-selected='true'] {
+  color: var(--on-accent);
+}
+
+/* Champs. */
+.onboarding-form fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.onboarding-field {
+  display: block;
+  margin: 0 0 12px;
+}
+.onboarding-field + .onboarding-field {
+  margin-bottom: 16px;
+}
+.onboarding-field > span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--encre-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+.onboarding-field em {
+  font-style: normal;
+  font-weight: 400;
+}
+.onboarding-field input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: var(--fond);
+  color: var(--encre);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  transition: border-color 180ms var(--ease);
+}
+.onboarding-field input::placeholder {
+  color: var(--encre-2);
+  opacity: 1;
+}
+.onboarding-field input:focus {
+  border-color: var(--prairie);
+}
+.onboarding-field input[aria-invalid='true'] {
+  border-color: var(--coquelicot);
+}
+.onboarding-field .onboarding-code {
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+}
+
+.onboarding-error {
+  margin: -4px 0 12px;
+  color: var(--coquelicot);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.onboarding-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 50px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--prairie);
+  color: var(--on-accent);
+  box-shadow: var(--shadow-glow);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 180ms var(--ease), opacity 180ms var(--ease);
+}
+.onboarding-primary:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.onboarding-screen button:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+.onboarding-screen input:disabled {
+  opacity: 0.75;
+}
+.onboarding-screen button:focus-visible {
+  outline: 3px solid var(--prairie);
+  outline-offset: 3px;
+}
+
+/* Les trois étapes, dans le vide sous la carte. */
+.onboarding-steps {
+  list-style: none;
+  width: 100%;
+  max-width: 400px;
+  margin: 22px auto 0;
+  padding: 0 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.onboarding-steps li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.onboarding-step-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  color: var(--on-accent);
+}
+.onboarding-step-icon.add { background: var(--prairie); }
+.onboarding-step-icon.check { background: var(--coquelicot); }
+.onboarding-step-icon.share { background: var(--soleil); color: var(--on-soleil); }
+
+/* Petits écrans : on resserre ; les étapes disparaissent si la place manque
+   (elles tomberaient sur la prairie). */
+@container (max-height: 760px) {
+  .onboarding-card { padding: 20px; }
+  .onboarding-icon { width: 38px; height: 38px; border-radius: 11px; margin-bottom: 6px; }
+  .onboarding-card h1 { font-size: 24px; }
+  .onboarding-intro { margin-bottom: 12px; }
+  .onboarding-tabs { margin-bottom: 12px; }
+  .onboarding-steps { margin-top: 16px; }
+  .onboarding-meadow { height: calc(100px + var(--onboarding-safe-bottom)); }
+  .onboarding-clouds { bottom: calc(64px + var(--onboarding-safe-bottom)); }
+}
+@container (max-height: 680px) {
+  .onboarding-steps { display: none; }
+  .onboarding-icon { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-screen button:active {
+    transform: none !important;
+  }
+  .onboarding-screen *,
+  .onboarding-screen *::before,
+  .onboarding-screen *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

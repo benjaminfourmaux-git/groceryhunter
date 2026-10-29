@@ -1,4 +1,4 @@
-# Liste de courses du foyer — Guide d'installation pas à pas
+# Huntly — Guide d'installation pas à pas
 
 Bienvenue ! Ce guide est écrit pour **une personne qui n'a jamais codé**. On va y aller
 **très lentement**, en expliquant chaque mot et chaque clic. Tu n'as rien à comprendre à
@@ -251,8 +251,8 @@ Appuie sur **Entrée**. Au bout de quelques secondes, une adresse s'affiche, du 
 **Ouvre cette adresse** : maintiens **Ctrl** (Mac : **Cmd**) et clique dessus, ou copie-la dans
 ton navigateur.
 
-✅ **Vérification** : l'application s'ouvre. Tu vois un écran d'accueil « Liste de courses » avec
-deux onglets « Créer un foyer » et « Rejoindre ».
+✅ **Vérification** : l'application s'ouvre. Tu vois l'accueil « Huntly » avec
+deux onglets « Rejoindre » et « Créer un foyer ».
 
 > Si tu vois un message d'erreur à la place :
 > - « Configuration manquante » → ton `.env` est incomplet (reprends l'étape 3.1) et relance.

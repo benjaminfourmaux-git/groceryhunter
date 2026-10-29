@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Icon from './Icon'
 import { useLang } from '../lib/i18n'
 
@@ -18,6 +18,17 @@ export default function AddBar({ onAdd }) {
   // déclenché par la fermeture du clavier peuvent tirer quasi simultanément.
   const adding = useRef(false)
   const touch = useRef(null)
+  const nameRef = useRef(null)
+  const timers = useRef(new Set())
+  const focusFrame = useRef(0)
+  function defer(callback, ms) {
+    const timer = setTimeout(() => { timers.current.delete(timer); callback() }, ms)
+    timers.current.add(timer)
+  }
+  useEffect(() => () => {
+    timers.current.forEach(clearTimeout)
+    cancelAnimationFrame(focusFrame.current)
+  }, [])
 
   function commitAdd() {
     const n = name.trim()
@@ -26,22 +37,60 @@ export default function AddBar({ onAdd }) {
     onAdd(n, qty)
     setName('')
     setQty('')
-    setTimeout(() => { adding.current = false }, 120)
+    defer(() => { adding.current = false }, 120)
+  }
+
+  // Après un ajout, le clavier reste ouvert, prêt pour l'article suivant :
+  // le curseur revient dans le champ article (même depuis la quantité).
+  function addAndContinue() {
+    commitAdd()
+    const active = document.activeElement
+    if (active && active !== nameRef.current && active.closest?.('.add-bar')) {
+      nameRef.current?.focus({ preventScroll: true })
+    }
   }
 
   // Touche « OK » / Entrée (plus de <form> : Safari s'en sert pour proposer
   // le remplissage automatique de contacts au-dessus du clavier).
   function onKeyDown(e) {
-    if (e.key !== 'Enter') return
+    if (e.key !== 'Enter' || e.nativeEvent.isComposing) return
     e.preventDefault()
-    commitAdd()
-    e.currentTarget.blur()
+    addAndContinue()
   }
+
+  // Le clavier ne se ferme que sur un TAP dans le haut de l'écran (liste,
+  // en-tête), hors de la barre d'ajout. Un défilement de la liste le laisse.
+  useEffect(() => {
+    let down = null
+    function onDown(e) {
+      const active = document.activeElement
+      down = active?.closest?.('.add-bar') && !e.target.closest?.('.add-bar')
+        ? { x: e.clientX, y: e.clientY, id: e.pointerId }
+        : null
+    }
+    function onUp(e) {
+      const d = down
+      down = null
+      if (!d || e.pointerId !== d.id) return
+      if (Math.abs(e.clientX - d.x) > 10 || Math.abs(e.clientY - d.y) > 10) return
+      const active = document.activeElement
+      if (active?.closest?.('.add-bar')) active.blur()
+    }
+    const cancel = () => { down = null }
+    document.addEventListener('pointerdown', onDown, true)
+    document.addEventListener('pointerup', onUp, true)
+    document.addEventListener('pointercancel', cancel, true)
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true)
+      document.removeEventListener('pointerup', onUp, true)
+      document.removeEventListener('pointercancel', cancel, true)
+    }
+  }, [])
 
   // Fermer le clavier (bouton « OK » iOS, tap ailleurs) ajoute l'article ; sauf
   // si le focus passe à l'autre champ de la barre (on complète la quantité).
   function onFieldBlur() {
-    setTimeout(() => {
+    defer(() => {
       const active = document.activeElement
       if (active && active.closest && active.closest('.add-bar')) return
       commitAdd()
@@ -67,7 +116,8 @@ export default function AddBar({ onAdd }) {
     e.preventDefault()
     el.style.transform = 'translateY(-2000px)'
     el.focus({ preventScroll: true })
-    requestAnimationFrame(() => { el.style.transform = '' })
+    cancelAnimationFrame(focusFrame.current)
+    focusFrame.current = requestAnimationFrame(() => { el.style.transform = '' })
   }
 
   const fieldProps = {
@@ -75,6 +125,7 @@ export default function AddBar({ onAdd }) {
     onKeyDown,
     onTouchStart,
     onTouchEnd,
+    onTouchCancel: () => { touch.current = null },
     enterKeyHint: 'done',
     autoComplete: 'off',
     'data-form-type': 'other',
@@ -84,6 +135,7 @@ export default function AddBar({ onAdd }) {
   return (
     <div className="add-bar" role="group">
       <input
+        ref={nameRef}
         className="add-name"
         type="text"
         value={name}
@@ -109,7 +161,7 @@ export default function AddBar({ onAdd }) {
         aria-label={t('aria_add')}
         disabled={!name.trim()}
         onPointerDown={(e) => e.preventDefault()}
-        onClick={commitAdd}
+        onClick={addAndContinue}
       >
         <Icon name="plus" size={22} strokeWidth={2.4} />
       </button>

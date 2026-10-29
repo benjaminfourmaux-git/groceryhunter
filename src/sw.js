@@ -20,11 +20,11 @@ self.addEventListener('push', (event) => {
     data = { body: event.data ? event.data.text() : '' }
   }
 
-  const title = data.title || 'Liste de courses'
+  const title = data.title || 'Huntly'
   const options = {
     body: data.body || '',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
+    icon: '/app-icon-192.png',
+    badge: '/app-icon-192.png',
     tag: data.tag || 'courses',
     renotify: true,
     data: { url: data.url || '/' },

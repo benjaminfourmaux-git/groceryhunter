@@ -2,7 +2,7 @@
 //  i18n maison (sans dépendance). FR ⇄ EN.
 //  - dictionnaires fr/en (valeur = chaîne, ou fonction(vars) pour les pluriels)
 //  - persistance localStorage
-//  - bascule « seamless » via l'API View Transitions (fondu enchaîné des mots)
+//  - fondu local des libellés traduits
 //  Seules les chaînes de l'UI sont traduites ; le contenu saisi ne l'est pas.
 // ============================================================================
 
@@ -15,11 +15,17 @@ import {
   useRef,
   useState,
 } from 'react'
-import { flushSync } from 'react-dom'
+import { animateCopyChange } from './copyMotion'
 
 const fr = {
   // Onboarding
-  app_name: 'Liste de courses',
+  app_name: 'Huntly',
+  onboarding_intro: 'La liste commune de la maison, synchronisée sur tous les téléphones.',
+  onboarding_steps: 'Comment ça marche',
+  step_add: 'Ajoute ce qui manque à la maison',
+  step_check: 'Coche les articles en magasin',
+  step_share: 'Tout le monde voit la même liste',
+  onboarding_access: 'Accès au foyer',
   tagline: 'La liste commune de la maison, synchronisée sur tous les téléphones.',
   tab_create: 'Créer un foyer',
   tab_join: 'Rejoindre',
@@ -33,8 +39,6 @@ const fr = {
   create_cta: 'Créer mon foyer',
   join_cta: 'Rejoindre le foyer',
   busy: 'Un instant…',
-  hint_create: 'Tu obtiendras un code à partager avec les autres.',
-  hint_join: 'Demande le code à quelqu’un déjà dans le foyer.',
   err_first_name: 'Indique ton prénom.',
   err_code: 'Indique le code du foyer.',
   err_generic: 'Une erreur est survenue.',
@@ -42,6 +46,14 @@ const fr = {
   // Header / Réglages
   settings_title: 'Réglages',
   settings_notifications: 'Notifications',
+  settings_theme: 'Thème',
+  theme_auto: 'Auto',
+  theme_light: 'Jour',
+  theme_dark: 'Crépuscule',
+  theme_change: 'Changer le thème',
+  theme_light_short: 'Clair',
+  rotate_hint: 'Tourne ton téléphone en mode portrait pour utiliser l’app.',
+  theme_dark_short: 'Soir',
   settings_language: 'Langue',
   bell_on: 'Notifications activées',
   bell_blocked: 'Notifications bloquées',
@@ -57,6 +69,10 @@ const fr = {
   err_leave: 'Impossible de quitter le foyer.',
   stats_title: 'Classement',
   stats_items_unit: ({ n }) => (n > 1 ? 'articles' : 'article'),
+  stats_sub: 'Nombre d’articles achetés depuis le début.',
+  leaving_soon: 'Déjà achetés',
+  just_now: 'à l’instant',
+  ago_min: ({ n }) => `il y a ${n} min`,
   stats_empty: 'Personne n’a encore rien acheté.',
 
   // Liste
@@ -121,7 +137,13 @@ const fr = {
 }
 
 const en = {
-  app_name: 'Shopping list',
+  app_name: 'Huntly',
+  onboarding_intro: 'Your home’s shared list, synced on every phone.',
+  onboarding_steps: 'How it works',
+  step_add: 'Add what’s missing at home',
+  step_check: 'Check items off at the store',
+  step_share: 'Everyone sees the same list',
+  onboarding_access: 'Access your home',
   tagline: 'Your home’s shared list, synced across every phone.',
   tab_create: 'Create a home',
   tab_join: 'Join',
@@ -135,14 +157,20 @@ const en = {
   create_cta: 'Create my home',
   join_cta: 'Join the home',
   busy: 'One moment…',
-  hint_create: 'You’ll get a code to share with the others.',
-  hint_join: 'Ask someone already in the home for the code.',
   err_first_name: 'Enter your first name.',
   err_code: 'Enter the home code.',
   err_generic: 'Something went wrong.',
 
   settings_title: 'Settings',
   settings_notifications: 'Notifications',
+  settings_theme: 'Theme',
+  theme_auto: 'Auto',
+  theme_light: 'Day',
+  theme_dark: 'Dusk',
+  theme_change: 'Change theme',
+  theme_light_short: 'Light',
+  rotate_hint: 'Turn your phone upright to use the app.',
+  theme_dark_short: 'Evening',
   settings_language: 'Language',
   bell_on: 'Notifications on',
   bell_blocked: 'Notifications blocked',
@@ -158,6 +186,10 @@ const en = {
   err_leave: 'Couldn’t leave the home.',
   stats_title: 'Leaderboard',
   stats_items_unit: ({ n }) => (n > 1 ? 'items' : 'item'),
+  stats_sub: 'Items bought since the start.',
+  leaving_soon: 'Already bought',
+  just_now: 'just now',
+  ago_min: ({ n }) => `${n} min ago`,
   stats_empty: 'No one has bought anything yet.',
 
   add_item_ph: 'Add an item…',
@@ -248,16 +280,9 @@ export function LanguageProvider({ children }) {
     document.documentElement.lang = lang
   }, [lang])
 
-  // Transition fluide (View Transitions) au changement de langue.
+  // Fondu local des étiquettes traduites, sans capturer/fondre toute la page.
   const animate = useCallback((apply) => {
-    const reduce =
-      typeof window !== 'undefined' &&
-      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    if (typeof document !== 'undefined' && document.startViewTransition && !reduce) {
-      document.startViewTransition(() => flushSync(apply))
-    } else {
-      apply()
-    }
+    animateCopyChange(apply)
   }, [])
 
   const toggleLang = useCallback(() => {

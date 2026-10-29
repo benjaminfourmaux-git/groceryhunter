@@ -1,7 +1,9 @@
-import { useMemo } from 'react'
+import { useLayoutEffect, useMemo, useRef } from 'react'
 import Icon from './Icon'
 import Avatar from './Avatar'
 import CheckDot from './CheckDot'
+import usePresenceItems from '../lib/usePresenceItems'
+import { collapseRow, resetRow } from '../lib/swipeExit'
 import { orderProducts, SORT_ALPHA, SORT_RANK } from '../lib/inventory'
 import { useLang } from '../lib/i18n'
 
@@ -9,10 +11,10 @@ import { useLang } from '../lib/i18n'
 // une heure après le passage en caisse. Il ne se vide plus tout seul — on y
 // repioche, et on le nettoie à la main.
 //
-// Les lignes sont celles de la liste (.item), en plus fin, sans date. Cocher
-// ici ne veut pas dire « acheté » mais « sélectionné » : les produits cochés
-// remontent en tête, et deux boutons apparaissent dans le dock. L'avatar est
-// celui du DERNIER acheteur.
+// Les lignes sont celles de la liste, en plus fin et sans date, pour en montrer
+// davantage. Cocher ici ne veut pas dire « acheté » mais « sélectionné » : les
+// produits cochés remontent en tête, et deux boutons apparaissent dans le dock.
+// L'avatar est celui du DERNIER acheteur.
 export default function Inventory({
   products,
   memberById,
@@ -20,11 +22,16 @@ export default function Inventory({
   onToggleSelected,
   sort,
   onSortChange,
+  active = true,
 }) {
   const { t } = useLang()
-  const ordered = useMemo(() => orderProducts(products, { selected, sort }), [products, selected, sort])
+  const ordered = useMemo(
+    () => orderProducts(products, { selected, sort }),
+    [products, selected, sort]
+  )
+  const present = usePresenceItems(ordered, active)
 
-  if (ordered.length === 0) {
+  if (present.length === 0) {
     return (
       <div className="empty">
         <span className="empty-icon">
@@ -37,7 +44,7 @@ export default function Inventory({
   }
 
   return (
-    <>
+    <div className="inv-view">
       {/* Deux tris : l'habitude du foyer, ou l'ordre alphabétique pour
           retrouver un produit précis. */}
       <div className="inv-sort" role="group" aria-label={t('inv_sort')}>
@@ -60,25 +67,42 @@ export default function Inventory({
       </div>
 
       <ul className="inv-list">
-      {ordered.map((p) => {
-        const buyer = memberById[p.last_bought_by]
-        const isOn = selected.has(p.id)
-        return (
-          <li key={p.id} className={'item compact' + (isOn ? ' selected' : '')}>
-            <div className="item-main">
-              {buyer && <Avatar name={buyer.display_name} color={buyer.color} size={20} />}
+        {present.map(({ it: p, exiting }) => {
+          const buyer = memberById[p.last_bought_by]
+          const isOn = selected.has(p.id)
+          return (
+            <InventoryRow key={p.id} exiting={exiting} selected={isOn}>
+              {buyer && <Avatar name={buyer.display_name} color={buyer.color} size={24} />}
               <span className="item-name">{p.name}</span>
-            </div>
-            <CheckDot
-              checked={isOn}
-              tone="brand"
-              onToggle={() => onToggleSelected(p.id)}
-              label={isOn ? t('aria_deselect') : t('aria_select')}
-            />
-          </li>
-        )
-      })}
+              <CheckDot
+                checked={isOn}
+                onToggle={() => onToggleSelected(p.id)}
+                label={isOn ? t('aria_deselect') : t('aria_select')}
+              />
+            </InventoryRow>
+          )
+        })}
       </ul>
-    </>
+    </div>
+  )
+}
+
+// Même sortie que dans la liste : la place se replie au lieu de disparaître
+// d'un coup sous le doigt.
+function InventoryRow({ exiting, selected, children }) {
+  const ref = useRef(null)
+  useLayoutEffect(() => {
+    if (exiting) return collapseRow(ref.current)
+    resetRow(ref.current)
+  }, [exiting])
+  return (
+    <li
+      ref={ref}
+      className={'inv-item' + (selected ? ' selected' : '')}
+      data-exiting={exiting || undefined}
+      inert={exiting ? '' : undefined}
+    >
+      {children}
+    </li>
   )
 }

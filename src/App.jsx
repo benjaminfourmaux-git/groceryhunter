@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { supabase, isConfigured } from './supabaseClient'
 import * as api from './lib/api'
 import { enablePush, pushSupported, pushPermission, pushUnsupportedReason } from './lib/push'
+import { initPress } from './lib/press'
 import { uuid } from './lib/uuid'
 import { T1_MS } from './lib/config'
 import { useLang } from './lib/i18n'
@@ -10,10 +11,14 @@ import Header from './components/Header'
 import AddBar from './components/AddBar'
 import ShoppingList from './components/ShoppingList'
 import Inventory from './components/Inventory'
-import StatsPanel from './components/StatsPanel'
+import GroupPanel from './components/GroupPanel'
 import BottomSheet from './components/BottomSheet'
 import Icon from './components/Icon'
 import SettingsMenu from './components/SettingsMenu'
+import Toast from './components/Toast'
+import { useLifecycleClock } from './lib/lifecycle'
+import useKeyboardDock from './lib/useKeyboardDock'
+import useTabGesture from './lib/useTabGesture'
 
 const boughtMsOf = (it) => (it.bought_at ? Date.parse(it.bought_at) : null)
 
@@ -39,7 +44,7 @@ export default function App() {
     }
     return 'rank'
   })
-  const [now, setNow] = useState(() => Date.now()) // tick 1s : fait vivre les comptes à rebours
+  const now = useLifecycleClock(items)
   const [view, setView] = useState('list') // list | inventory
   const [pushState, setPushState] = useState('default')
   const [leaving, setLeaving] = useState(false)
@@ -50,6 +55,7 @@ export default function App() {
   // fermeture : on masque le bouton ⋯ tant qu'il l'est (sinon on verrait le rond
   // par défaut en double pendant la résorption).
   const [menuMounted, setMenuMounted] = useState(false)
+  const [statsMounted, setStatsMounted] = useState(false)
   const [toast, setToast] = useState(null)
 
   const hid = member?.household_id
@@ -60,6 +66,8 @@ export default function App() {
   const skipItemsEchoUntil = useRef(0)
   const promoting = useRef(false)
   const settingsBtnRef = useRef(null) // ancre du « morph » Réglages (le bouton ⋯)
+  const statsBtnRef = useRef(null)
+  const mainBarRef = useRef(null)
   const tabbarRef = useRef(null)
   const indicatorRef = useRef(null)
   const viewRef = useRef(view)
@@ -68,26 +76,21 @@ export default function App() {
   // Table id → membre : nom + couleur cohérents dans la liste, l'historique, les stats.
   const memberById = useMemo(() => Object.fromEntries(members.map((m) => [m.id, m])), [members])
 
-  // ---- Partition dérivée de l'heure courante -------------------------------
-  // À acheter (bought_at vide) + achetés depuis < T1 (compte à rebours, en bas).
-  const listItems = useMemo(() => {
-    const toBuy = []
-    const counting = []
-    for (const it of items) {
-      const b = boughtMsOf(it)
-      if (b == null) toBuy.push(it)
-      else if (now - b < T1_MS) counting.push(it)
-    }
-    toBuy.sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)) // récents en haut
-    counting.sort((a, b) => boughtMsOf(a) - boughtMsOf(b)) // le dernier acheté tout en bas
-    return [...toBuy, ...counting]
-  }, [items, now])
-
+  // Tri uniquement quand les données changent ; l'horloge ne filtre qu'aux
+  // échéances, tandis que les anneaux vivent dans la liste visible.
+  const orderedItems = useMemo(() => [...items].sort((a, b) => {
+    if (!!a.bought_at !== !!b.bought_at) return a.bought_at ? 1 : -1
+    return a.bought_at
+      ? boughtMsOf(a) - boughtMsOf(b)
+      : Date.parse(b.created_at) - Date.parse(a.created_at)
+  }), [items])
+  const listItems = useMemo(() => orderedItems.filter((it) =>
+    !it.bought_at || now - boughtMsOf(it) < T1_MS
+  ), [orderedItems, now])
   const toBuyCount = useMemo(() => items.reduce((n, it) => n + (it.bought_at ? 0 : 1), 0), [items])
 
   const showToast = useCallback((msg, kind = 'info') => {
-    setToast({ msg, kind })
-    setTimeout(() => setToast(null), 3200)
+    setToast({ id: uuid(), msg, kind })
   }, [])
 
   const loadItems = useCallback(async (h) => {
@@ -133,71 +136,11 @@ export default function App() {
     })
   }, [products])
 
-  // Tick 1s : fait vivre les comptes à rebours et déclenche la promotion à T1.
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [])
+  // Effet « press organique » sur tous les boutons (une seule fois).
+  useEffect(() => initPress(), [])
 
-  // Clavier mobile : l'app garde toute la hauteur de l'écran (le clavier passe
-  // par-dessus et cache la barre d'onglets) ; seule la barre d'ajout se soulève
-  // pour se poser juste au-dessus du clavier (--kb-lift, animé en CSS).
-  // La hauteur du clavier se lit sur le VisualViewport. iOS ne la donne qu'une
-  // fois le clavier ouvert : on réutilise la dernière hauteur connue dès le
-  // focus, pour que la barre monte en même temps que le clavier.
-  useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-    const root = document.documentElement
-    const GAP = 8 // espace entre la barre d'ajout et le clavier
-    let raf = 0
-    let lastKb = 0
-
-    const apply = (kb) => {
-      const dock = document.querySelector('.dock')
-      const tabbar = document.querySelector('.tabbar')
-      let under = 0 // distance barre d'ajout → bas de l'écran, clavier fermé
-      if (dock && tabbar) {
-        const cs = getComputedStyle(dock)
-        under = tabbar.offsetHeight + (parseFloat(cs.rowGap) || 0) + (parseFloat(cs.paddingBottom) || 0)
-      }
-      const lift = kb > 0 ? Math.max(0, kb + GAP - under) : 0
-      root.style.setProperty('--kb-lift', lift + 'px')
-    }
-
-    const sync = () => {
-      cancelAnimationFrame(raf)
-      raf = requestAnimationFrame(() => {
-        root.style.setProperty('--vv-top', vv.offsetTop + 'px')
-        const kb = Math.max(0, Math.round(root.clientHeight - vv.height))
-        if (kb > 0) lastKb = kb
-        apply(kb)
-        // Clavier refermé : annule tout reste de défilement du document.
-        if (kb === 0 && window.scrollY !== 0) window.scrollTo(0, 0)
-      })
-    }
-
-    const inAddBar = (el) => !!(el && el.closest && el.closest('.add-bar'))
-    const onFocusIn = (e) => {
-      if (inAddBar(e.target) && lastKb > 0) apply(lastKb)
-    }
-    const onFocusOut = (e) => {
-      if (inAddBar(e.target) && !inAddBar(e.relatedTarget)) apply(0)
-    }
-
-    vv.addEventListener('resize', sync)
-    vv.addEventListener('scroll', sync)
-    document.addEventListener('focusin', onFocusIn)
-    document.addEventListener('focusout', onFocusOut)
-    sync()
-    return () => {
-      cancelAnimationFrame(raf)
-      vv.removeEventListener('resize', sync)
-      vv.removeEventListener('scroll', sync)
-      document.removeEventListener('focusin', onFocusIn)
-      document.removeEventListener('focusout', onFocusOut)
-    }
-  }, [])
+  useKeyboardDock()
+  useTabGesture(tabbarRef, indicatorRef, viewRef, setView, phase)
 
   // Mémorise la langue du membre côté serveur → notifications push localisées.
   useEffect(() => {
@@ -206,7 +149,7 @@ export default function App() {
 
   // Promotion paresseuse : une heure après l'achat, l'article quitte la liste
   // pour l'inventaire. Rien n'est écrit avant — c'est ce qui permet de décocher
-  // sans laisser de trace. Déclenché par le tick, comme l'ancien nettoyage.
+  // sans laisser de trace. Réveillée par l'horloge, qui tique à l'échéance T1.
   useEffect(() => {
     if (!hid || promoting.current) return
     const hasRipe = items.some((it) => {
@@ -224,81 +167,6 @@ export default function App() {
         promoting.current = false
       })
   }, [now, items, hid, loadItems, loadProducts])
-
-  // Slide Liste/Historique : maintien + déplacement linéaire, aimant au relâchement.
-  useEffect(() => {
-    const bar = tabbarRef.current
-    const ind = indicatorRef.current
-    if (!bar || !ind) return
-
-    let active = false
-    let pid = null
-    let startX = 0
-    let startFrac = 0
-    let frac = 0
-    let moved = false
-    let downTab = null
-
-    const place = (f) => {
-      frac = Math.max(0, Math.min(1, f))
-      ind.style.transform = `translateX(${frac * 100}%)`
-    }
-
-    function down(e) {
-      active = true
-      moved = false
-      pid = e.pointerId
-      startX = e.clientX
-      startFrac = viewRef.current === 'inventory' ? 1 : 0
-      downTab = e.target.closest('.tab')
-      ind.style.transition = 'none'
-      place(startFrac)
-      try {
-        bar.setPointerCapture(pid)
-      } catch {
-        /* noop */
-      }
-    }
-    function move(e) {
-      if (!active || e.pointerId !== pid) return
-      const step = (bar.clientWidth - 12) / 2 // largeur d'un onglet (padding 6px ×2)
-      const dx = e.clientX - startX
-      if (Math.abs(dx) > 4) moved = true
-      place(startFrac + dx / step)
-    }
-    function up() {
-      if (!active) return
-      active = false
-      const tabs = bar.querySelectorAll('.tab')
-      const target = moved
-        ? frac >= 0.5
-          ? 'inventory'
-          : 'list'
-        : downTab === tabs[1]
-          ? 'inventory'
-          : 'list'
-
-      ind.style.transition = ''
-      ind.style.transform = `translateX(${target === 'inventory' ? 100 : 0}%)`
-      if (target !== viewRef.current) setView(target)
-      const done = () => {
-        ind.style.transform = ''
-        ind.removeEventListener('transitionend', done)
-      }
-      ind.addEventListener('transitionend', done)
-    }
-
-    bar.addEventListener('pointerdown', down)
-    bar.addEventListener('pointermove', move)
-    bar.addEventListener('pointerup', up)
-    bar.addEventListener('pointercancel', up)
-    return () => {
-      bar.removeEventListener('pointerdown', down)
-      bar.removeEventListener('pointermove', move)
-      bar.removeEventListener('pointerup', up)
-      bar.removeEventListener('pointercancel', up)
-    }
-  }, [phase])
 
   // ---- Démarrage : session anonyme + membre ---------------------------------
   useEffect(() => {
@@ -391,7 +259,6 @@ export default function App() {
     setPhase('ready')
   }
 
-  // ---- Actions liste --------------------------------------------------------
   // ---- Les deux actions de la sélection dans l'inventaire -------------------
 
   // Copie : les produits restent dans l'inventaire, et ceux qui sont déjà à
@@ -412,7 +279,7 @@ export default function App() {
     }
   }
 
-  // Un seul article part sans confirmation (la ligne disparaît sous le doigt,
+  // Un seul produit part sans confirmation (la ligne disparaît sous le doigt,
   // c'est lisible) ; au-delà, on demande — effacer vingt produits par mégarde
   // ne se rattrape pas.
   function askDeleteSelected() {
@@ -433,7 +300,9 @@ export default function App() {
     }
   }
 
-  // Quantité modifiable après coup : les articles venus de l'inventaire
+  // ---- Actions liste --------------------------------------------------------
+
+  // Quantité modifiable après coup : les articles repris de l'inventaire
   // arrivent sans quantité, et c'est dans la liste qu'on la règle.
   async function handleSetQuantity(id, raw) {
     const q = raw && raw.trim() ? raw.trim() : null
@@ -549,6 +418,8 @@ export default function App() {
   }
 
   function handleShowStats() {
+    setSettingsOpen(false)
+    setStatsMounted(true)
     setStatsOpen(true) // les membres portent déjà purchases_count
   }
 
@@ -573,85 +444,86 @@ export default function App() {
     <div className="app">
       <Header
         household={member.household}
-        members={members}
         onShowStats={handleShowStats}
-        onOpenSettings={() => { setMenuMounted(true); setSettingsOpen(true) }}
+        onOpenSettings={() => { setStatsOpen(false); setMenuMounted(true); setSettingsOpen(true) }}
         hideSettingsBtn={menuMounted}
         settingsBtnRef={settingsBtnRef}
+        hideStatsBtn={statsMounted}
+        statsBtnRef={statsBtnRef}
       />
 
-      <main className={'content' + (view === 'list' ? ' has-cta' : '')} key={view}>
-        {view === 'list' ? (
-          <ShoppingList
-            items={listItems}
-            now={now}
-            memberById={memberById}
-            onToggleBought={handleToggleBought}
-            onDelete={handleDelete}
-            onSetQuantity={handleSetQuantity}
-          />
-        ) : (
-          <Inventory
-            products={products}
-            memberById={memberById}
-            selected={selected}
-            onToggleSelected={toggleSelected}
-            sort={invSort}
-            onSortChange={setInvSort}
-          />
-        )}
-      </main>
+      <div className="content-stack">
+        <main id="list-panel" role="tabpanel" aria-labelledby="list-tab"
+          className="content has-cta" data-active={view === 'list'} aria-hidden={view !== 'list'}
+          inert={view !== 'list' ? '' : undefined}>
+          <ShoppingList items={listItems} now={now} memberById={memberById}
+            onToggleBought={handleToggleBought} onDelete={handleDelete}
+            onSetQuantity={handleSetQuantity} active={view === 'list'} />
+        </main>
+        <main id="inventory-panel" role="tabpanel" aria-labelledby="inventory-tab"
+          className="content" data-active={view === 'inventory'} aria-hidden={view !== 'inventory'}
+          inert={view !== 'inventory' ? '' : undefined}>
+          <Inventory products={products} memberById={memberById} selected={selected}
+            onToggleSelected={toggleSelected} sort={invSort} onSortChange={setInvSort}
+            active={view === 'inventory'} />
+        </main>
+      </div>
 
       <div className="dock">
-        {view === 'list' && <AddBar onAdd={handleAdd} />}
-
-        {/* À la place de la barre d'ajout, dès qu'un produit est coché. */}
-        {view === 'inventory' && selected.size > 0 && (
-          <div className="inv-actions">
-            <button type="button" className="btn-primary" onClick={handleAddSelectedToList}>
-              <Icon name="plus" size={18} />
-              {t('inv_to_list')}
-            </button>
-            <button type="button" className="btn-danger" onClick={askDeleteSelected}>
-              <Icon name="trash" size={18} />
-              {t('inv_delete')}
-            </button>
+        <Meadow />
+        <div className="dock-ground" ref={mainBarRef}>
+          <div className="add-slot" data-active={view === 'list'} inert={view !== 'list' ? '' : undefined} aria-hidden={view !== 'list'}>
+            <div className="add-slot-inner"><AddBar onAdd={handleAdd} /></div>
           </div>
-        )}
 
-        <nav className="tabbar" data-active={view} ref={tabbarRef}>
-          <span className="tab-indicator" aria-hidden="true" ref={indicatorRef} />
-          <button
-            type="button"
-            className={'tab' + (view === 'list' ? ' active' : '')}
-            onClick={() => setView('list')}
-          >
-            <span className="tab-icon">
-              <Icon name="list" size={22} />
+          {/* Mêmes mécaniques que la barre d'ajout : le créneau se replie quand
+              rien n'est coché, donc les onglets ne sautent pas. */}
+          <div className="add-slot" data-active={view === 'inventory' && selected.size > 0}
+            inert={view === 'inventory' && selected.size > 0 ? undefined : ''}
+            aria-hidden={!(view === 'inventory' && selected.size > 0)}>
+            <div className="add-slot-inner">
+              <div className="inv-actions">
+                <button type="button" className="btn-primary" onClick={handleAddSelectedToList}>
+                  <Icon name="plus" size={18} />
+                  {t('inv_to_list')}
+                </button>
+                <button type="button" className="btn-danger" onClick={askDeleteSelected}>
+                  <Icon name="trash" size={18} />
+                  {t('inv_delete')}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <nav className="tabbar" role="tablist" aria-label={t('tab_list') + ' / ' + t('tab_inventory')} data-active={view} ref={tabbarRef}>
+            <span className="tab-indicator" aria-hidden="true" ref={indicatorRef} />
+            <button
+              type="button"
+              id="list-tab" role="tab" aria-selected={view === 'list'} aria-controls="list-panel"
+              className={'tab' + (view === 'list' ? ' active' : '')}
+              onClick={() => setView('list')}
+            >
+              <Icon name="list" size={19} />
+              <span>{t('tab_list')}</span>
               {toBuyCount > 0 && <span className="tab-badge">{toBuyCount}</span>}
-            </span>
-            <span>{t('tab_list')}</span>
-          </button>
-          <button
-            type="button"
-            className={'tab' + (view === 'inventory' ? ' active' : '')}
-            onClick={() => setView('inventory')}
-          >
-            <span className="tab-icon">
-              <Icon name="inventory" size={22} />
-            </span>
-            <span>{t('tab_inventory')}</span>
-          </button>
-        </nav>
+            </button>
+            <button
+              type="button"
+              id="inventory-tab" role="tab" aria-selected={view === 'inventory'} aria-controls="inventory-panel"
+              className={'tab' + (view === 'inventory' ? ' active' : '')}
+              onClick={() => setView('inventory')}
+            >
+              <Icon name="inventory" size={19} />
+              <span>{t('tab_inventory')}</span>
+            </button>
+          </nav>
+        </div>
       </div>
 
       {confirmDelete && (
-        <BottomSheet onClose={() => setConfirmDelete(false)}>
+        <BottomSheet className="confirm" onClose={() => setConfirmDelete(false)}>
           {(close) => (
             <>
-              <span className="modal-emoji danger" aria-hidden="true">
-                <Icon name="trash" size={24} />
-              </span>
               <h2>{t('inv_delete_title', { n: selected.size })}</h2>
               <p className="muted">{t('inv_delete_body')}</p>
               <div className="modal-actions">
@@ -668,12 +540,9 @@ export default function App() {
       )}
 
       {leaving && (
-        <BottomSheet onClose={() => setLeaving(false)}>
+        <BottomSheet className="confirm" onClose={() => setLeaving(false)}>
           {(close) => (
             <>
-              <span className="modal-emoji danger" aria-hidden="true">
-                <Icon name="logout" size={24} />
-              </span>
               <h2>{t('leave_title')}</h2>
               <p className="muted">{t('leave_body')}</p>
               <div className="modal-actions">
@@ -689,37 +558,20 @@ export default function App() {
         </BottomSheet>
       )}
 
-      {statsOpen && (
-        <BottomSheet className="sheet" onClose={() => setStatsOpen(false)}>
-          {(close) => (
-            <>
-              <div className="sheet-head">
-                <h2>{t('stats_title')}</h2>
-              </div>
-              <div className="stats-scroll">
-                <StatsPanel members={members} />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="btn-ghost" onClick={close}>
-                  {t('close')}
-                </button>
-              </div>
-            </>
-          )}
-        </BottomSheet>
-      )}
+      <GroupPanel open={statsOpen} onClose={() => setStatsOpen(false)}
+        onClosed={() => setStatsMounted(false)} anchorRef={statsBtnRef}
+        dockRef={mainBarRef} members={members} />
 
       <SettingsMenu
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         onClosed={() => setMenuMounted(false)}
         anchorRef={settingsBtnRef}
-        pushState={pushState}
-        onEnablePush={handleEnablePush}
+        dockRef={mainBarRef}
         onLeave={() => setLeaving(true)}
       />
 
-      {toast && <div className={'toast ' + toast.kind}>{toast.msg}</div>}
+      {toast && <Toast key={toast.id} message={toast.msg} kind={toast.kind} onDismiss={() => setToast((current) => current?.id === toast.id ? null : current)} />}
     </div>
   )
 }
@@ -733,6 +585,23 @@ function humanizeStartupError(err) {
     return 'schema'
   }
   return msg || 'unknown'
+}
+
+// Prairie fleurie peinte au-dessus du dock (décor « Grand ciel »).
+function Meadow() {
+  return (
+    <svg className="meadow" viewBox="0 0 390 62" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <path className="meadow-back" d="M0 26C70 10 148 36 228 22c54-9 110-12 162-4v48H0V26Z" />
+      <path className="meadow-front" d="M0 42C92 30 170 52 260 40c48-6 92-6 130 0v22H0V42Z" />
+      <circle cx="48" cy="34" r="3.4" fill="#D6513C" />
+      <circle cx="96" cy="40" r="2.6" fill="#E8B23C" />
+      <circle cx="150" cy="44" r="3" fill="#FDFBF5" />
+      <circle cx="206" cy="33" r="3.4" fill="#D6513C" />
+      <circle cx="262" cy="39" r="2.6" fill="#E8B23C" />
+      <circle cx="318" cy="31" r="3" fill="#FDFBF5" />
+      <circle cx="358" cy="38" r="3.4" fill="#D6513C" />
+    </svg>
+  )
 }
 
 function ErrorScreen({ which }) {

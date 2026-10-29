@@ -1,53 +1,57 @@
-// Courbe = var(--ease), mais en LITTÉRAL : `var()` dans une chaîne `transition`
-// posée en JS (inline) ne se parse pas sur Safari mobile → transition invalide,
-// donc changement instantané et durées ignorées. En dur, ça marche partout.
-const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
-const DUR_HEIGHT = 0.4 // s
-const DUR_OPACITY = 0.3 // s — un peu plus court : transparent avant la fin du repli
+import { EASE, EXIT_MS, reducedMotion } from './motion'
 
-// Sortie fluide d'une ligne de swipe (liste ET historique).
-// Après le glissement, on replie la ligne : hauteur + opacité → 0. Le `gap` du
-// conteneur flex est compensé par une marge négative pour que les voisines
-// remontent sans à-coup. `onDone` est appelé quand le repli est terminé.
-export function collapseRow(row, onDone) {
+const exits = new WeakMap()
+
+// Hauteur et espace se replient ensemble ; le rendu optimiste et la requête
+// n'attendent pas la fin de l'animation. Renvoie une fonction d'arrêt.
+// `timing` (facultatif) : durées propres, ex. le repli plus lent qui prolonge
+// un glissé de suppression ({ height: 400, opacity: 300 }).
+export function collapseRow(row, onDone = () => {}, timing = {}) {
+  const heightMs = timing.height ?? EXIT_MS
+  const opacityMs = timing.opacity ?? 160
+  exits.get(row)?.()
+  if (reducedMotion()) {
+    onDone()
+    return () => {}
+  }
   const gap = parseFloat(getComputedStyle(row.parentElement).rowGap) || 0
-  const h = row.offsetHeight
-
-  // Couper l'animation d'entrée `item-in` : appliquée avec `both`, elle fige
-  // opacity:1 et écraserait notre opacity:0 inline (une anim CSS l'emporte sur
-  // l'inline) → la bordure/ombre resterait visible à hauteur 0. On la neutralise.
+  const height = row.offsetHeight
   row.style.animation = 'none'
-  row.style.height = h + 'px'
+  row.style.height = height + 'px'
   row.style.overflow = 'hidden'
-  void row.offsetHeight // reflow : la transition part de la hauteur figée
-
-  row.style.transition =
-    `height ${DUR_HEIGHT}s ${EASE}, opacity ${DUR_OPACITY}s ${EASE}, margin ${DUR_HEIGHT}s ${EASE}`
+  void row.offsetHeight
+  row.style.transition = `height ${heightMs}ms ${EASE}, opacity ${opacityMs}ms ${EASE}, margin ${heightMs}ms ${EASE}, padding ${heightMs}ms ${EASE}`
   row.style.height = '0px'
+  row.style.paddingTop = '0px'
+  row.style.paddingBottom = '0px'
   row.style.opacity = '0'
-  // Pas de marge négative sur la dernière ligne (aucune voisine à remonter).
   if (gap && row.nextElementSibling) row.style.marginBottom = `-${gap}px`
-
-  let done = false
-  const end = (e) => {
-    if (e && e.propertyName && e.propertyName !== 'height') return // attend la hauteur
-    if (done) return
-    done = true
+  let finished = false
+  let timer
+  function cancel() {
     row.removeEventListener('transitionend', end)
+    clearTimeout(timer)
+    exits.delete(row)
+  }
+  function end(e) {
+    if (e && (e.target !== row || e.propertyName !== 'height')) return
+    if (finished) return
+    finished = true
+    cancel()
     onDone()
   }
   row.addEventListener('transitionend', end)
-  setTimeout(end, DUR_HEIGHT * 1000 + 120) // filet de sécurité si transitionend ne tire pas
+  timer = setTimeout(end, heightMs + 80)
+  exits.set(row, cancel)
+  return cancel
 }
 
-// Annule un repli/glissement en cours (échec de suppression) : on remet les
-// styles inline à zéro pour que la ligne revienne à son état normal.
 export function resetRow(row, fg) {
-  row.style.transition = ''
-  row.style.height = ''
-  row.style.opacity = ''
-  row.style.marginBottom = ''
-  row.style.overflow = ''
+  exits.get(row)?.()
+  for (const prop of ['transition', 'height', 'paddingTop', 'paddingBottom', 'opacity', 'marginBottom', 'overflow', 'animation']) row.style[prop] = ''
   row.removeAttribute('data-armed')
-  if (fg) fg.style.transform = ''
+  if (fg) {
+    fg.style.transition = ''
+    fg.style.transform = ''
+  }
 }
