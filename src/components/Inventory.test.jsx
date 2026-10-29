@@ -37,6 +37,27 @@ function monter(props = {}) {
 const lignes = () =>
   screen.getAllByRole('listitem').map((li) => li.querySelector('.item-name').textContent)
 
+describe('Inventory — rangement', () => {
+  // React range en déplaçant des nœuds dans le DOM, ce qui relance leur
+  // animation CSS d'entrée : les lignes semblaient réapparaître.
+  it('ne rejoue pas l’entrée des lignes déjà là quand une sélection les déplace', () => {
+    const { rerender } = monter()
+    const avant = Object.fromEntries(screen.getAllByRole('listitem').map((li) => [li.dataset.flipId, li]))
+    rerender(
+      <LanguageProvider>
+        <Inventory products={PRODUITS} memberById={MEMBRES} selected={new Set(['cafe'])} sort="rank" onSortChange={() => {}} onToggleSelected={() => {}} />
+      </LanguageProvider>
+    )
+    expect(lignes()).toEqual(['Café', 'Lait', 'Pain'])
+    const apres = screen.getAllByRole('listitem')
+    // Mêmes nœuds (déplacés, pas recréés), tous marqués « déjà arrivés ».
+    apres.forEach((li) => {
+      expect(li).toBe(avant[li.dataset.flipId])
+      expect(li.hasAttribute('data-arrived')).toBe(true)
+    })
+  })
+})
+
 describe('Inventory', () => {
   it('affiche un produit par ligne, sans date', () => {
     monter()

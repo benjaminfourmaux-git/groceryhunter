@@ -1009,6 +1009,25 @@ button.qty-badge,
   background: var(--nuage-2);
   box-shadow: inset 0 0 0 1.5px var(--prairie), var(--shadow-card);
 }
+/* Rangement (Inventory.jsx, useReorderMotion). Une ligne déjà affichée ne
+   rejoue pas son entrée quand React la déplace dans le DOM. Pendant le
+   mouvement, les lignes qui glissent passent au-dessus des immobiles, et le
+   produit porté au-dessus de tout, avec l'ombre de ce qui flotte : elle
+   s'étire à l'envol et se resserre quand il se pose. */
+.inv-item[data-arrived] {
+  animation: none;
+}
+.inv-item[data-sorting] {
+  position: relative;
+  z-index: 1;
+}
+.inv-item[data-sorting='carried'] {
+  z-index: 2;
+  box-shadow: var(--shadow-pop);
+}
+.inv-item.selected[data-sorting='carried'] {
+  box-shadow: inset 0 0 0 1.5px var(--prairie), var(--shadow-pop);
+}
 
 /* Le rond de sélection (components/CheckDot.jsx). Même géométrie que la case
    « acheté », en prairie et sans anneau. */
