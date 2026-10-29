@@ -81,6 +81,30 @@ describe('ShoppingList — quantité modifiable', () => {
     expect(onSetQuantity).toHaveBeenCalledWith('lait', '3')
   })
 
+  it('montre un indice « + Qté » qui ouvre le champ quand il n’y a pas de quantité', async () => {
+    monter([article()])
+    const indice = document.querySelector('.qty-hint')
+    expect(indice?.textContent).toBe('Qté')
+    // Réservé au doigt : le nom porte déjà le libellé accessible.
+    expect(indice.getAttribute('aria-hidden')).toBe('true')
+    expect(indice.tabIndex).toBe(-1)
+    await userEvent.setup().click(indice)
+    expect(champQte()).toBeTruthy()
+    expect(document.querySelector('.qty-hint')).toBeNull()
+  })
+
+  it('remplace l’indice par la pastille quand la quantité existe', () => {
+    monter([article({ quantity: 'x2' })])
+    expect(document.querySelector('.qty-hint')).toBeNull()
+    expect(screen.getByRole('button', { name: 'x2' })).toBeTruthy()
+  })
+
+  it('ne propose pas l’indice sur un article déjà acheté', () => {
+    monter([article({ bought_at: '2026-10-27T08:30:00Z', bought_by: 'cam' })])
+    const indice = document.querySelector('.qty-hint')
+    expect(!indice || indice.disabled).toBe(true)
+  })
+
   it('n’ouvre rien sur un article déjà acheté : il est en partance', () => {
     monter([article({ bought_at: '2026-10-27T08:30:00Z', bought_by: 'cam' })])
     expect(screen.getByRole('button', { name: 'Modifier la quantité de Lait' })).toHaveProperty(
