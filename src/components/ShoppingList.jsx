@@ -218,7 +218,7 @@ function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, o
     // Le nom et le champ de quantité sont des zones de saisie : le glissé de
     // suppression ne part pas de là (sinon la ligne file sous le doigt qu'on
     // posait pour corriger « x2 »).
-    if (e.target.closest('.item-name-btn, .qty-edit, .qty-badge')) return
+    if (e.target.closest('.item-name-btn, .qty-edit, .qty-badge, .qty-hint')) return
     // Le glissé peut partir de la case : un tap la coche toujours, un glissé
     // supprime (la case annule son appui dès que le doigt bouge).
     const fromCheck = e.target.closest('.buy-check')
@@ -469,10 +469,29 @@ function SwipeRow({ it, displayBoughtAt, now, adder, onToggleBought, onDelete, o
               }}
             />
           </form>
+        ) : it.quantity ? (
+          <button type="button" className="qty-badge" onClick={() => setEditing(true)}>
+            {it.quantity}
+          </button>
         ) : (
-          it.quantity && (
-            <button type="button" className="qty-badge" onClick={() => setEditing(true)}>
-              {it.quantity}
+          // Sans quantité, une pastille en pointillés montre où toucher pour en
+          // ajouter une. Le nom ouvre déjà le même champ et porte le libellé
+          // accessible : cet indice ne sert qu'au doigt, d'où aria-hidden.
+          // Il part avec le rangement, comme arrive « il y a 2 min » : cocher
+          // ne doit pas changer la largeur du nom avant que la ligne descende.
+          !displayBoughtAt && (
+            <button
+              type="button"
+              className="qty-hint"
+              onClick={() => setEditing(true)}
+              disabled={bought}
+              aria-hidden="true"
+              tabIndex={-1}
+            >
+              <span className="qty-hint-chip">
+                <Icon name="plus" size={11} strokeWidth={2.6} />
+                {t('qty_ph')}
+              </span>
             </button>
           )
         )}

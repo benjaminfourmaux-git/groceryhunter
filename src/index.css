@@ -824,12 +824,48 @@ button.qty-badge {
   cursor: pointer;
   font-family: inherit;
 }
+/* Indice « + Qté » d'un article sans quantité : trait en pointillés et texte
+   secondaire, sans aplat, pour se distinguer de la vraie pastille verte. Le
+   bouton a la hauteur de la case « acheté » : une cible confortable qui ne
+   grandit pas la ligne. Coché, il s'efface sur place jusqu'au rangement. */
+.qty-hint {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--encre-2);
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.2s var(--ease);
+}
+.qty-hint:disabled {
+  opacity: 0;
+  cursor: default;
+}
+.qty-hint-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 9px 3px 7px;
+  border: 1.5px dashed var(--hairline-2);
+  border-color: color-mix(in srgb, var(--encre-2) 45%, transparent);
+  border-radius: var(--pill);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
 /* Pas de « saisie » du nom ni de la pastille : ni sélection, ni glisser-déposer
    natif, ni menu d'appui long iOS. Ce sont des contrôles, pas du texte à
    copier — mêmes protections que la case « acheté ». */
 .item-name-btn,
 .item-name-btn *,
-button.qty-badge {
+button.qty-badge,
+.qty-hint,
+.qty-hint * {
   -webkit-user-drag: none;
   -webkit-user-select: none;
   user-select: none;
